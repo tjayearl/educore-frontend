@@ -1,16 +1,146 @@
-# React + Vite
+# 🎓 Educore - Learning Management Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Educore is a web-based learning management system designed for students and administrators across all levels of education — from primary school to university.
 
-Currently, two official plugins are available:
+The platform allows students to manage their classes, assignments, exams, and grades, while administrators can oversee and manage the system.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 🚀 Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 👨‍🎓 Student Dashboard
+- View overview (dashboard summary)
+- Add and manage classes
+- Track assignments (pending, submitted, graded)
+- View upcoming and completed exams
+- Monitor grades and performance
+- View teachers and subjects
+- Personalized student profile
 
-## Expanding the ESLint configuration
+### 🛠️ Admin Dashboard
+- Manage users (students/admins)
+- View system overview
+- Monitor activity and data
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## 🧩 Sections in the Student Dashboard
+
+### 📊 Dashboard
+- Quick stats (classes, assignments, exams, grades)
+- Upcoming activities
+- Recent activity
+
+### 📚 Classes
+- Add classes
+- View class details
+- See teacher and schedule
+- View topics covered
+
+### 📝 Assignments
+- View all assignments
+- Submit assignments
+- Track status (Pending / Submitted / Graded)
+
+### 🧪 Exams
+- View upcoming exams
+- View completed exams
+- See results and performance
+
+### 🎓 Grades
+- Overall performance
+- Grades per subject
+- Detailed breakdown
+
+### 👤 Profile
+- Add student details
+- Customize learning info
+
+---
+
+## 🛠️ Tech Stack
+
+- HTML
+- CSS (Tailwind CSS)
+- JavaScript (React + Vite)
+- JSON Server (`db.json`) for data storage
+- Vite (development server)
+
+---
+
+## 📁 Project Structure
+
+```
+educore-frontend/
+│
+├── public/
+├── src/
+│   ├── assets/
+│   ├── components/
+│   ├── pages/
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
+├── index.html
+├── package.json
+├── vite.config.js
+└── db.json
+```
+
+---
+
+## ⚙️ Installation & Setup
+
+1. Clone the repository:
+   ```bash
+   git clone <your-repo-link>
+   ```
+
+2. Navigate into the project:
+   ```bash
+   cd educore-frontend
+   ```
+
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+5. Start JSON server (for backend simulation):
+   ```bash
+   npx json-server --watch db.json --port 3000
+   ```
+
+## 🔄 CRUD Operations
+
+This project supports:
+
+- **GET** → Fetch data (classes, assignments, etc.)
+- **POST** → Add new data
+- **PATCH** → Update data
+- **DELETE** → Remove data
+
+## 🎯 Project Goals
+
+- Build a functional learning platform
+- Practice frontend development (HTML, CSS, JS)
+- Implement CRUD operations using db.json
+- Create a clean and user-friendly UI
+- Simulate real-world application structure
+
+## 📌 Future Improvements
+
+- Authentication system (login/register)
+- File uploads for assignments
+- Real-time messaging (student ↔ teacher)
+- Notifications system
+- Performance analytics (charts/graphs)
+
+## 👨‍💻 Author
+
+**Tjay Earl**
