@@ -1,4 +1,4 @@
-import Navbar from "../components/Navbar";
+import StudentSidebar from "../components/StudentSidebar";
 
 const assignments = [
   {
@@ -30,7 +30,7 @@ function Assignments() {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Navbar user={user} />
+      <StudentSidebar />
       <div className="flex-1 p-8 overflow-y-auto">
         <div className="container mx-auto">
           <h1 className="text-3xl font-bold text-blue-700 mb-8">My Assignments</h1>

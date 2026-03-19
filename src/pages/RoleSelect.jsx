@@ -4,8 +4,11 @@ export default function RoleSelect() {
   const navigate = useNavigate();
 
   const selectRole = (role) => {
-    // Navigate to login/register and pass role in state
-    navigate("/auth", { state: { role } });
+    if (role === "admin") {
+      navigate("/admin/login");
+    } else {
+      navigate("/login");
+    }
   };
 
   return (

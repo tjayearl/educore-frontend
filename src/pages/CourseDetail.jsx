@@ -1,4 +1,4 @@
-import Navbar from "../components/Navbar";
+import StudentSidebar from "../components/StudentSidebar";
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 
@@ -29,7 +29,7 @@ function CourseDetail() {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Navbar user={user} />
+      <StudentSidebar />
       <div className="flex-1 p-8 overflow-y-auto">
         <div className="container mx-auto">
           <h1 className="text-3xl font-bold text-blue-700 mb-6">Course Detail - {id}</h1>

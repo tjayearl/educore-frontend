@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
+import StudentSidebar from "../components/StudentSidebar";
 
 const examsData = [
   {
@@ -65,7 +65,7 @@ function Exams() {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Navbar user={user} />
+      <StudentSidebar />
       <div className="flex-1 p-8 overflow-y-auto">
         <div className="container mx-auto">
           <h1 className="text-3xl font-bold text-blue-700 mb-8">Exams</h1>

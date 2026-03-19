@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
+import StudentSidebar from "../components/StudentSidebar";
 
 function ExamDetail() {
   const location = useLocation();
@@ -10,7 +10,7 @@ function ExamDetail() {
   if (!exam) {
     return (
         <div className="flex h-screen bg-gray-100">
-            <Navbar user={user} />
+            <StudentSidebar />
             <div className="flex-1 p-8 flex items-center justify-center">
                 <div className="text-center">
                     <h2 className="text-2xl font-bold text-gray-700 mb-4">Exam details not available</h2>
@@ -25,7 +25,7 @@ function ExamDetail() {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Navbar user={user} />
+      <StudentSidebar />
       <div className="flex-1 p-8 overflow-y-auto">
         <div className="container mx-auto max-w-4xl">
           <button

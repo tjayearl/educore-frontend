@@ -1,4 +1,4 @@
-import Navbar from "../components/Navbar";
+import StudentSidebar from "../components/StudentSidebar";
 import { Link } from "react-router-dom";
 
 function Dashboard() {
@@ -31,7 +31,7 @@ function Dashboard() {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Navbar user={user} />
+      <StudentSidebar />
       <div className="flex-1 p-8 overflow-y-auto">
         <div className="container mx-auto max-w-6xl">
           

@@ -21,10 +21,10 @@ function Navbar({ user }) {
             </li>
           )}
           <li>
-            <Link to="/dashboard" className="block px-6 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition">Dashboard</Link>
+            <Link to="/classes" className="block px-6 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition">Course Catalog</Link>
           </li>
           <li>
-            <Link to="/classes" className="block px-6 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition">Classes</Link>
+            <Link to="/dashboard" className="block px-6 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition">My Progress</Link>
           </li>
           <li>
             <Link to="/assignments" className="block px-6 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition">Assignments</Link>
@@ -41,9 +41,18 @@ function Navbar({ user }) {
         </ul>
       </nav>
       <div className="p-4 border-t border-gray-200">
+        <div className="flex items-center gap-3 mb-4 px-2">
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                {user.name?.[0] || "U"}
+            </div>
+            <div className="overflow-hidden">
+                <p className="text-sm font-bold text-gray-800 truncate">{user.name}</p>
+                <p className="text-xs text-gray-500 capitalize truncate">{user.role}</p>
+            </div>
+        </div>
         <button
           onClick={handleLogout}
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+          className="w-full bg-red-50 text-red-600 py-2 rounded hover:bg-red-100 transition font-medium"
           >
             Logout
           </button>
