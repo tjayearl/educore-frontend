@@ -1,15 +1,14 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, User, Eye, EyeOff, UserPlus, BookOpen, Shield } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, UserPlus, BookOpen } from "lucide-react";
 import { authAPI } from "../services/api";
-import { handleAPIError, showToast } from "../utils/errorHandler";
 
 export default function Register() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
-    role: "learner" // Fixed role for student registration
+    role: "learner"
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -23,20 +22,34 @@ export default function Register() {
   const handleRegister = async (e) => {
     e.preventDefault();
     setError("");
+    
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    
     setLoading(true);
 
     try {
-      if (formData.fullName && formData.email && formData.password) {
-        const data = await authAPI.register(formData.fullName, formData.email, formData.password, formData.role);
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        showToast("Account created successfully!", "success");
-        navigate("/dashboard"); 
+      const data = await authAPI.register(
+        formData.fullName,
+        formData.email,
+        formData.password,
+        formData.role
+      );
+      
+      // Save token and user
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      
+      // Redirect based on role
+      if (data.user.role === "admin") {
+        navigate("/admin/dashboard");
       } else {
-        setError("Please fill all fields");
+        navigate("/dashboard");
       }
     } catch (err) {
-      handleAPIError(err, setError);
+      setError(err.message || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -50,11 +63,11 @@ export default function Register() {
             <BookOpen className="text-purple-600" size={40} />
           </div>
           <h1 className="text-4xl font-bold text-white mb-2">Join Educore</h1>
-          <p className="text-purple-100">Student Registration</p>
+          <p className="text-purple-100">Start your learning journey</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Create Student Account</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Create Account</h2>
 
           {error && (
             <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded">
@@ -107,7 +120,7 @@ export default function Register() {
                   className="w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
                   placeholder="••••••••"
                   required
-                  minLength="6"
+                  minLength="8"
                 />
                 <button
                   type="button"
@@ -117,22 +130,20 @@ export default function Register() {
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
+              <p className="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Role</label>
-              <div className="relative">
-                <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <select
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none bg-white"
-                >
-                  <option value="learner">Learner</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">I am a</label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+              >
+                <option value="learner">Student / Learner</option>
+                <option value="admin">Administrator</option>
+              </select>
             </div>
 
             <button
@@ -147,7 +158,7 @@ export default function Register() {
                 </>
               ) : (
                 <>
-                  <UserPlus className="mr-2 h-5 w-5" />
+                  <UserPlus size={20} />
                   Create Account
                 </>
               )}
