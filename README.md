@@ -1,146 +1,129 @@
-# 🎓 Educore - Learning Management Platform
+# 🎓 Educore - Learning Management System
 
-Educore is a web-based learning management system designed for students and administrators across all levels of education — from primary school to university.
+Educore is a full-stack Learning Management System (LMS) designed to facilitate seamless online education. It features distinct portals for **Learners** to browse courses and track progress, and for **Administrators** to manage course content, lessons, and monitor platform activity.
 
-The platform allows students to manage their classes, assignments, exams, and grades, while administrators can oversee and manage the system.
-
----
-
-## 🚀 Features
-
-### 👨‍🎓 Student Dashboard
-- View overview (dashboard summary)
-- Add and manage classes
-- Track assignments (pending, submitted, graded)
-- View upcoming and completed exams
-- Monitor grades and performance
-- View teachers and subjects
-- Personalized student profile
-
-### 🛠️ Admin Dashboard
-- Manage users (students/admins)
-- View system overview
-- Monitor activity and data
+The system is built with a modern tech stack, utilizing a hybrid database architecture to optimize for both relational integrity and content flexibility.
 
 ---
 
-## 🧩 Sections in the Student Dashboard
+## ️ Tech Stack
 
-### 📊 Dashboard
-- Quick stats (classes, assignments, exams, grades)
-- Upcoming activities
-- Recent activity
+### Frontend
+- **Framework:** React 18 (Vite)
+- **Styling:** Tailwind CSS for responsive design
+- **Icons:** Lucide React
+- **State Management:** React Hooks
+- **Routing:** React Router v6
 
-### 📚 Classes
-- Add classes
-- View class details
-- See teacher and schedule
-- View topics covered
+### Backend
+- **Runtime:** Node.js & Express.js
+- **Architecture:** RESTful API
+- **Deployment:** Render (Web Service)
 
-### 📝 Assignments
-- View all assignments
-- Submit assignments
-- Track status (Pending / Submitted / Graded)
-
-### 🧪 Exams
-- View upcoming exams
-- View completed exams
-- See results and performance
-
-### 🎓 Grades
-- Overall performance
-- Grades per subject
-- Detailed breakdown
-
-### 👤 Profile
-- Add student details
-- Customize learning info
+### Databases (Hybrid Architecture)
+- **PostgreSQL:** Handles Users, Auth, and Course Metadata (Structured Data).
+- **MongoDB:** Handles Lesson Content, User Progress, and Audit Logs (Document Data).
 
 ---
 
-## 🛠️ Tech Stack
+## 🚀 Setup Instructions
 
-- HTML
-- CSS (Tailwind CSS)
-- JavaScript (React + Vite)
-- JSON Server (`db.json`) for data storage
-- Vite (development server)
+### Prerequisites
+- Node.js (v18+)
+- npm or yarn
 
----
-
-## 📁 Project Structure
-
-```
-educore-frontend/
-│
-├── public/
-├── src/
-│   ├── assets/
-│   ├── components/
-│   ├── pages/
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── index.css
-├── index.html
-├── package.json
-├── vite.config.js
-└── db.json
-```
-
----
-
-## ⚙️ Installation & Setup
-
-1. Clone the repository:
+### Frontend Setup
+1. **Clone the repository**
    ```bash
-   git clone <your-repo-link>
-   ```
-
-2. Navigate into the project:
-   ```bash
+   git clone <repository-url>
    cd educore-frontend
    ```
 
-3. Install dependencies:
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-4. Start the development server:
+3. **Start the development server**
    ```bash
    npm run dev
    ```
+   The application will run at `http://localhost:5173`.
 
-5. Start JSON server (for backend simulation):
-   ```bash
-   npx json-server --watch db.json --port 3000
-   ```
+### Backend Connection
+The frontend is currently configured to connect to the live production backend hosted on Render.
+- **API URL:** `https://educore-backend-7p4o.onrender.com/api`
 
-## 🔄 CRUD Operations
+If you wish to run the backend locally, update `src/services/api.js` to point to `http://localhost:5000/api` after starting the backend server.
 
-This project supports:
+---
 
-- **GET** → Fetch data (classes, assignments, etc.)
-- **POST** → Add new data
-- **PATCH** → Update data
-- **DELETE** → Remove data
+##  API Documentation
 
-## 🎯 Project Goals
+### Core Endpoints
 
-- Build a functional learning platform
-- Practice frontend development (HTML, CSS, JS)
-- Implement CRUD operations using db.json
-- Create a clean and user-friendly UI
-- Simulate real-world application structure
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| **Auth** | | |
+| POST | `/auth/register` | Register a new user (Learner/Admin) |
+| POST | `/auth/login` | Login and receive JWT |
+| **Courses** | | |
+| GET | `/courses` | List all available courses |
+| GET | `/courses/:id` | Get specific course details |
+| POST | `/courses` | Create a new course (Admin only) |
+| DELETE | `/courses/:id` | Delete a course (Admin only) |
+| **Lessons** | | |
+| GET | `/courses/:id/lessons` | Get all lessons for a course |
+| POST | `/courses/:id/lessons` | Add a lesson to a course (Admin only) |
+| DELETE | `/courses/:courseId/lessons/:lessonId` | Delete a lesson (Admin only) |
+| **Progress** | | |
+| GET | `/progress/:courseId` | Get user's progress for a course |
+| POST | `/progress/:cId/lessons/:lId/complete` | Mark a lesson as completed |
+| **Activity** | | |
+| GET | `/activities/all` | Get system-wide audit logs (Admin only) |
 
-## 📌 Future Improvements
+---
 
-- Authentication system (login/register)
-- File uploads for assignments
-- Real-time messaging (student ↔ teacher)
-- Notifications system
-- Performance analytics (charts/graphs)
+## 🗄️ Database Design Choices
+
+We utilized a **Hybrid Database Architecture** to leverage the strengths of both SQL and NoSQL systems.
+
+### 1. PostgreSQL (SQL) - Users & Metadata
+**Why?** User accounts, authentication data, and high-level course metadata require strict schemas and referential integrity.
+- **Benefits:** ACID compliance ensures transactional reliability. Relational structure makes it easy to map relationships between users and their roles.
+
+### 2. MongoDB (NoSQL) - Content & Progress
+**Why?** Lesson content (text, video URLs) and user progress tracking are dynamic and often hierarchical.
+- **Benefits:** Flexible schema allows different lesson types without altering table structures. Storing progress as nested documents/arrays provides faster read performance for the student dashboard without complex joins.
+
+---
+
+## 🏗️ Microservices Strategy
+
+While currently built as a modular application, Educore is designed to be easily split into microservices as it scales:
+
+1.  **Identity Service:** Independent handling of Auth (Login/Register) using PostgreSQL.
+2.  **Catalog Service:** Manages Course metadata and discovery.
+3.  **Content Service:** Dedicated to serving lesson content (MongoDB), allowing for independent scaling for heavy read traffic.
+4.  **Tracker Service:** Handles high-frequency write operations for User Progress and Analytics.
+
+**Communication:** Services would communicate via REST APIs or a message queue (e.g., RabbitMQ) for asynchronous events like "Course Completed" -> "Issue Certificate".
+
+---
+
+## 💭 Reflections & Trade-offs
+
+### Design Decisions
+- **React + Vite:** Chosen for speed and optimal developer experience. Vite provides instant server start, crucial for rapid iteration.
+- **JWT Authentication:** Stateless authentication reduces the load on the database for every request, improving scalability.
+
+### Trade-offs
+- **Hybrid Database Complexity:** Maintaining two database connections (Postgres & Mongo) increases operational complexity (backups, migrations) but offers significant performance benefits for specific data types.
+- **Tailwind CSS:** While it speeds up development, it can lead to cluttered HTML. Componentization in React mitigates this issue.
+- **Separation of Concerns:** separating the frontend completely from the backend allows for independent deployment and scaling, but introduces CORS and API synchronization challenges compared to a full-stack framework like Next.js or Remix.
+
+---
 
 ## 👨‍💻 Author
-
-**Tjay Earl**
+**Tjay Earl**  
+*KBC Junior Full-Stack Developer Assessment*
