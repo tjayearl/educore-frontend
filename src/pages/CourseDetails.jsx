@@ -1,184 +1,240 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle, Circle, PlayCircle, FileText, Clock } from "lucide-react";
+import { 
+  ArrowLeft, BookOpen, Video, FileText, CheckCircle, Circle,
+  Play, Download, ExternalLink
+} from "lucide-react";
 import { coursesAPI, lessonsAPI, progressAPI } from "../services/api";
-import { handleAPIError, showToast } from "../utils/errorHandler";
 
 export default function CourseDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
-  const [progress, setProgress] = useState(null);
+  const [completedLessons, setCompletedLessons] = useState([]);
+  const [selectedLesson, setSelectedLesson] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
-      navigate("/login");
-      return;
-    }
-
-    fetchCourseData();
+    loadCourseData();
   }, [id]);
 
-  const fetchCourseData = async () => {
+  const loadCourseData = async () => {
     try {
       setLoading(true);
-      const [courseData, lessonsData] = await Promise.all([
-        coursesAPI.getById(id),
-        lessonsAPI.getAll(id)
+      
+      // For demo, use mock data
+      setCourse({
+        id: parseInt(id),
+        title: "Introduction to JavaScript",
+        description: "Learn the fundamentals of JavaScript programming",
+        category: "Programming"
+      });
+
+      setLessons([
+        { 
+          id: 1, 
+          title: "Variables and Data Types", 
+          contentType: "video",
+          contentUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          order: 1 
+        },
+        { 
+          id: 2, 
+          title: "Functions and Scope", 
+          contentType: "text",
+          contentBody: "Functions are reusable blocks of code...",
+          order: 2 
+        },
+        { 
+          id: 3, 
+          title: "Arrays and Objects", 
+          contentType: "video",
+          contentUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          order: 3 
+        },
       ]);
-      
-      setCourse(courseData.course || courseData);
-      setLessons(lessonsData.lessons || lessonsData || []);
-      
-      // Fetch progress
-      try {
-        const progressData = await progressAPI.get(id);
-        setProgress(progressData.progress || progressData);
-      } catch (err) {
-        // No progress yet
-        setProgress({ completedLessons: [] });
-      }
+
+      setCompletedLessons([1]); // Lesson 1 is completed
+      setSelectedLesson(null);
     } catch (err) {
-      handleAPIError(err, setError);
+      console.error("Error loading course:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleLesson = async (lessonId) => {
-    const isCompleted = progress?.completedLessons?.some(l => l.lessonId === lessonId);
-    
-    if (!isCompleted) {
-      try {
-        await progressAPI.markComplete(id, lessonId);
-        // Refresh progress
-        const progressData = await progressAPI.get(id);
-        setProgress(progressData.progress || progressData);
-        showToast("Lesson completed!", "success");
-      } catch (err) {
-        handleAPIError(err, setError);
+  const handleMarkComplete = async (lessonId) => {
+    try {
+      if (completedLessons.includes(lessonId)) {
+        // Unmark as complete
+        setCompletedLessons(completedLessons.filter(id => id !== lessonId));
+      } else {
+        // Mark as complete
+        await progressAPI.markComplete(course.id, lessonId);
+        setCompletedLessons([...completedLessons, lessonId]);
       }
+    } catch (err) {
+      console.error("Error marking lesson:", err);
     }
   };
+
+  const progress = lessons.length > 0 
+    ? Math.round((completedLessons.length / lessons.length) * 100) 
+    : 0;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading course...</p>
-        </div>
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button onClick={() => navigate(-1)} className="text-blue-600 font-semibold">
-            ← Go Back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const completed = progress?.completedLessons?.length || 0;
-  const total = lessons.length;
-  const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto p-8">
+      <div className="max-w-7xl mx-auto p-8">
+        {/* Header */}
         <button 
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/dashboard")}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-6"
         >
           <ArrowLeft size={20} />
-          Back
+          Back to Dashboard
         </button>
 
-        <div className="bg-white rounded-xl shadow p-8 mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">{course?.title}</h1>
+        {/* Course Info */}
+        <div className="bg-white rounded-xl shadow p-8 mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">{course?.title}</h1>
           <p className="text-gray-600 mb-4">{course?.description}</p>
-          <span className="inline-block px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-sm">
+          <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
             {course?.category}
           </span>
 
+          {/* Progress Bar */}
           <div className="mt-6">
             <div className="flex justify-between text-sm text-gray-600 mb-2">
-              <span>{completed}/{total} lessons completed</span>
-              <span>{progressPercent}%</span>
+              <span>{completedLessons.length}/{lessons.length} lessons completed</span>
+              <span className="font-bold">{progress}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
               <div 
-                className="bg-green-500 h-3 rounded-full transition-all"
-                style={{ width: `${progressPercent}%` }}
+                className={`h-3 rounded-full transition-all ${
+                  progress === 100 ? 'bg-green-500' : 'bg-blue-600'
+                }`}
+                style={{ width: `${progress}%` }}
               />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow p-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-6">Course Lessons</h2>
-          
-          {lessons.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No lessons available yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {lessons.map((lesson, index) => {
-                const isCompleted = progress?.completedLessons?.some(l => l.lessonId === lesson.id);
+        {/* Lessons List */}
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Lesson List */}
+          <div className="lg:col-span-1">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Course Lessons</h2>
+            <div className="space-y-3">
+              {lessons.map((lesson) => {
+                const isCompleted = completedLessons.includes(lesson.id);
+                const isSelected = selectedLesson?.id === lesson.id;
                 
                 return (
-                  <div 
+                  <div
                     key={lesson.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition"
-                    onClick={() => toggleLesson(lesson.id)}
+                    onClick={() => setSelectedLesson(lesson)}
+                    className={`bg-white rounded-lg shadow p-4 cursor-pointer transition ${
+                      isSelected ? 'ring-2 ring-blue-600' : 'hover:shadow-md'
+                    }`}
                   >
-                    <div className="flex items-center gap-4 flex-1">
+                    <div className="flex items-center gap-3">
                       {isCompleted ? (
                         <CheckCircle className="text-green-500 flex-shrink-0" size={24} />
                       ) : (
                         <Circle className="text-gray-300 flex-shrink-0" size={24} />
                       )}
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-semibold text-gray-500">Lesson {index + 1}</span>
-                        </div>
-                        <h3 className="font-semibold text-gray-800">{lesson.title}</h3>
-                        <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                        <p className="font-semibold text-gray-800">{lesson.title}</p>
+                        <div className="flex items-center gap-2 mt-1">
                           {lesson.contentType === "video" ? (
-                            <><PlayCircle size={16} /> Video Lesson</>
+                            <Video size={14} className="text-gray-400" />
                           ) : (
-                            <><FileText size={16} /> Reading</>
+                            <FileText size={14} className="text-gray-400" />
                           )}
+                          <span className="text-xs text-gray-500">
+                            {lesson.contentType === "video" ? "Video" : "Text"}
+                          </span>
                         </div>
                       </div>
                     </div>
-                    
-                    {!isCompleted && (
-                      <button 
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-semibold"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleLesson(lesson.id);
-                        }}
-                      >
-                        Mark Complete
-                      </button>
-                    )}
                   </div>
                 );
               })}
             </div>
-          )}
+          </div>
+
+          {/* Lesson Content */}
+          <div className="lg:col-span-2">
+            {selectedLesson ? (
+              <div className="bg-white rounded-xl shadow p-8">
+                <h3 className="text-2xl font-bold text-gray-800 mb-4">{selectedLesson.title}</h3>
+                
+                {/* Video Content */}
+                {selectedLesson.contentType === "video" && (
+                  <div className="mb-6">
+                    <div className="bg-gray-900 rounded-lg aspect-video flex items-center justify-center mb-4">
+                      <a 
+                        href={selectedLesson.contentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                      >
+                        <Play size={20} />
+                        Watch Video
+                        <ExternalLink size={16} />
+                      </a>
+                    </div>
+                    <p className="text-sm text-gray-500">Click to watch on YouTube</p>
+                  </div>
+                )}
+
+                {/* Text Content */}
+                {selectedLesson.contentType === "text" && (
+                  <div className="mb-6">
+                    <div className="prose max-w-none">
+                      <p className="text-gray-700 leading-relaxed">{selectedLesson.contentBody}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mark Complete Button */}
+                <button
+                  onClick={() => handleMarkComplete(selectedLesson.id)}
+                  className={`w-full py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
+                    completedLessons.includes(selectedLesson.id)
+                      ? 'bg-green-500 text-white hover:bg-green-600'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {completedLessons.includes(selectedLesson.id) ? (
+                    <>
+                      <CheckCircle size={20} />
+                      Completed
+                    </>
+                  ) : (
+                    <>
+                      <Circle size={20} />
+                      Mark as Complete
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow p-12 text-center">
+                <BookOpen className="mx-auto text-gray-400 mb-4" size={48} />
+                <p className="text-gray-500">Select a lesson to start learning</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
