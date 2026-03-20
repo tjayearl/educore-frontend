@@ -4,6 +4,7 @@ import {
   BookOpen, Users, Activity, Plus, LogOut, 
   LayoutDashboard, X, FileText, Video
 } from "lucide-react";
+import { coursesAPI, lessonsAPI } from "../services/api";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -36,30 +37,37 @@ export default function AdminDashboard() {
     contentBody: ""
   });
 
-  const handleCreateCourse = (e) => {
+  const handleCreateCourse = async (e) => {
     e.preventDefault();
-    const newCourse = {
-      id: courses.length + 1,
-      ...courseForm,
-      lessons: 0,
-      students: 0
-    };
-    setCourses([...courses, newCourse]);
-    setCourseForm({ title: "", description: "", category: "" });
-    setShowCourseModal(false);
+    try {
+      const data = await coursesAPI.create(
+        courseForm.title,
+        courseForm.description,
+        courseForm.category
+      );
+      setCourses([...courses, data.course]);
+      setCourseForm({ title: "", description: "", category: "" });
+      setShowCourseModal(false);
+    } catch (err) {
+      alert("Failed to create course");
+    }
   };
 
-  const handleAddLesson = (e) => {
+  const handleAddLesson = async (e) => {
     e.preventDefault();
-    console.log("Lesson added:", lessonForm);
-    
-    // Update course lesson count
-    setCourses(courses.map(c => 
-      c.id === selectedCourse ? {...c, lessons: c.lessons + 1} : c
-    ));
-    
-    setLessonForm({ title: "", contentType: "text", contentUrl: "", contentBody: "" });
-    setShowLessonModal(false);
+    try {
+      await lessonsAPI.create(
+        selectedCourse,
+        lessonForm.title,
+        lessonForm.contentType,
+        lessonForm.contentUrl,
+        lessonForm.contentBody
+      );
+      setLessonForm({ title: "", contentType: "text", contentUrl: "", contentBody: "" });
+      setShowLessonModal(false);
+    } catch (err) {
+      alert("Failed to add lesson");
+    }
   };
 
   const handleLogout = () => {
