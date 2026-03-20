@@ -2,14 +2,19 @@ import { apiRequest } from "./api.js";
 
 export async function registerUser(fullName, email, password, role) {
   // ✅ FRONTEND VALIDATION
-  if (!fullName || !email || !password || !role) {
-    alert("All fields are required");
+  if (!fullName || !email || !password) {
+    alert("Name, email, and password are required");
+    return;
+  }
+
+  if (password.length < 8) {
+    alert("Password must be at least 8 characters long");
     return;
   }
 
   try {
     const data = await apiRequest("/auth/register", "POST", {
-      fullName,
+      full_name: fullName,
       email,
       password,
       role,

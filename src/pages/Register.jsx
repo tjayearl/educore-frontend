@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, User, Eye, EyeOff, UserPlus, BookOpen } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, UserPlus, BookOpen, Shield } from "lucide-react";
 import { authAPI } from "../services/api";
 import { handleAPIError, showToast } from "../utils/errorHandler";
 
@@ -116,6 +116,22 @@ export default function Register() {
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Role</label>
+              <div className="relative">
+                <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <select
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none bg-white"
+                >
+                  <option value="learner">Learner</option>
+                  <option value="admin">Admin</option>
+                </select>
               </div>
             </div>
 
