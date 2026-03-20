@@ -120,17 +120,14 @@ export default function MyProgress() {
               <Award size={20} />
               My Progress
             </button>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition"
+            >
+              <LogOut size={20} />
+              Logout
+            </button>
           </nav>
-        </div>
-
-        <div className="absolute bottom-6 left-6 right-6">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
-          >
-            <LogOut size={20} />
-            Logout
-          </button>
         </div>
       </div>
 
