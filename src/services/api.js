@@ -97,6 +97,19 @@ export const coursesAPI = {
       console.error('Get course by ID error:', err);
       throw err;
     }
+  },
+
+  delete: async (id) => {
+    try {
+      const res = await fetch(`${API_URL}/courses/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+      return await handleResponse(res);
+    } catch (err) {
+      console.error('Delete course error:', err);
+      throw err;
+    }
   }
 };
 
@@ -126,6 +139,19 @@ export const lessonsAPI = {
       return await handleResponse(res);
     } catch (err) {
       console.error('Create lesson error:', err);
+      throw err;
+    }
+  },
+
+  delete: async (courseId, lessonId) => {
+    try {
+      const res = await fetch(`${API_URL}/courses/${courseId}/lessons/${lessonId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+      return await handleResponse(res);
+    } catch (err) {
+      console.error('Delete lesson error:', err);
       throw err;
     }
   }

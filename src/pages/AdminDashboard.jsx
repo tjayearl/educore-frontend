@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   BookOpen, Users, Activity, Plus, LogOut, 
-  LayoutDashboard, X, FileText, Video
+  LayoutDashboard, X, FileText, Video, Trash2, ArrowLeft, Settings
 } from "lucide-react";
 import { coursesAPI, lessonsAPI } from "../services/api";
 import { handleAPIError, showToast } from "../utils/errorHandler";
@@ -14,10 +14,12 @@ export default function AdminDashboard() {
   const [showLessonModal, setShowLessonModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [adminUser, setAdminUser] = useState(null);
+  const [viewingCourse, setViewingCourse] = useState(null);
 
   // Initialize ALL state at the top
   const [courses, setCourses] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [courseLessons, setCourseLessons] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [courseForm, setCourseForm] = useState({
@@ -57,6 +59,33 @@ export default function AdminDashboard() {
     loadData();
   }, [navigate]);
 
+  const handleManageCourse = async (course) => {
+    setViewingCourse(course);
+    setLoading(true);
+    try {
+        const lessons = await lessonsAPI.getAll(course.id);
+        setCourseLessons(Array.isArray(lessons) ? lessons : (lessons.lessons || []));
+    } catch (err) {
+        handleAPIError(err);
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const handleDeleteCourse = async (id, e) => {
+    e.stopPropagation();
+    if(!window.confirm("Are you sure you want to delete this course? This action cannot be undone.")) return;
+    
+    try {
+        await coursesAPI.delete(id);
+        setCourses(courses.filter(c => c.id !== id));
+        if(viewingCourse?.id === id) setViewingCourse(null);
+        showToast("Course deleted successfully", "success");
+    } catch (err) {
+        handleAPIError(err);
+    }
+  };
+
   const handleCreateCourse = async (e) => {
     e.preventDefault();
     try {
@@ -77,13 +106,19 @@ export default function AdminDashboard() {
   const handleAddLesson = async (e) => {
     e.preventDefault();
     try {
+      const targetCourseId = viewingCourse ? viewingCourse.id : selectedCourse;
       await lessonsAPI.create(
-        selectedCourse,
+        targetCourseId,
         lessonForm.title,
         lessonForm.contentType,
         lessonForm.contentUrl,
         lessonForm.contentBody
       );
+      
+      if (viewingCourse) {
+        const lessons = await lessonsAPI.getAll(viewingCourse.id);
+        setCourseLessons(Array.isArray(lessons) ? lessons : (lessons.lessons || []));
+      }
       
       // Refresh courses to update lesson count
       const coursesData = await coursesAPI.getAll();
@@ -94,6 +129,21 @@ export default function AdminDashboard() {
       showToast("Lesson added successfully", "success");
     } catch (err) {
       handleAPIError(err);
+    }
+  };
+
+  const handleDeleteLesson = async (lessonId) => {
+    if(!window.confirm("Delete this lesson?")) return;
+    try {
+        await lessonsAPI.delete(viewingCourse.id, lessonId);
+        setCourseLessons(courseLessons.filter(l => l.id !== lessonId));
+        showToast("Lesson deleted successfully", "success");
+        
+        // Refresh courses to update lesson count
+        const coursesData = await coursesAPI.getAll();
+        setCourses(Array.isArray(coursesData) ? coursesData : (coursesData.courses || []));
+    } catch (err) {
+        handleAPIError(err);
     }
   };
 
@@ -118,7 +168,7 @@ export default function AdminDashboard() {
 
           <nav className="space-y-2">
             <button
-              onClick={() => setActiveTab("dashboard")}
+              onClick={() => { setActiveTab("dashboard"); setViewingCourse(null); }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                 activeTab === "dashboard" ? "bg-slate-700" : "hover:bg-slate-700"
               }`}
@@ -127,7 +177,7 @@ export default function AdminDashboard() {
               Dashboard
             </button>
             <button
-              onClick={() => setActiveTab("courses")}
+              onClick={() => { setActiveTab("courses"); setViewingCourse(null); }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                 activeTab === "courses" ? "bg-slate-700" : "hover:bg-slate-700"
               }`}
@@ -136,7 +186,7 @@ export default function AdminDashboard() {
               My Courses
             </button>
             <button
-              onClick={() => setActiveTab("activities")}
+              onClick={() => { setActiveTab("activities"); setViewingCourse(null); }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                 activeTab === "activities" ? "bg-slate-700" : "hover:bg-slate-700"
               }`}
@@ -194,6 +244,73 @@ export default function AdminDashboard() {
           {/* Courses Tab */}
           {activeTab === "courses" && (
             <>
+              {viewingCourse ? (
+                // Course Detail / Manage View
+                <div className="space-y-6">
+                  <button 
+                    onClick={() => setViewingCourse(null)}
+                    className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+                  >
+                    <ArrowLeft size={20} /> Back to Courses
+                  </button>
+
+                  <div className="bg-white rounded-xl shadow p-6 border-l-4 border-blue-600">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-2xl font-bold text-gray-800">{viewingCourse.title}</h3>
+                        <p className="text-gray-500 mt-2">{viewingCourse.description}</p>
+                        <div className="mt-4 flex gap-3">
+                          <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">{viewingCourse.category}</span>
+                          <span className="text-sm text-gray-500">{courseLessons.length} Lessons</span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setShowLessonModal(true)}
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                      >
+                        <Plus size={18} /> Add Lesson
+                      </button>
+                    </div>
+                  </div>
+
+                  <h3 className="text-xl font-bold text-gray-800">Lessons</h3>
+                  {loading ? (
+                    <p>Loading lessons...</p>
+                  ) : courseLessons.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
+                      <p className="text-gray-500">No lessons added yet.</p>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-xl shadow overflow-hidden">
+                      {courseLessons.map((lesson, idx) => (
+                        <div key={lesson.id} className="p-4 border-b last:border-0 flex justify-between items-center hover:bg-gray-50 transition">
+                          <div className="flex items-center gap-4">
+                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-500 text-sm font-bold">
+                              {idx + 1}
+                            </span>
+                            <div>
+                              <p className="font-semibold text-gray-800">{lesson.title}</p>
+                              <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                                {lesson.contentType === 'video' ? <Video size={14}/> : <FileText size={14}/>}
+                                <span className="capitalize">{lesson.contentType}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => handleDeleteLesson(lesson.id)}
+                            className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition"
+                            title="Delete Lesson"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Course List View
+                <>
               <button 
                 onClick={() => setShowCourseModal(true)}
                 className="mb-6 flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
@@ -204,7 +321,7 @@ export default function AdminDashboard() {
 
               <div className="grid gap-6">
                 {courses.map((course) => (
-                  <div key={course.id} className="bg-white rounded-xl shadow p-6">
+                  <div key={course.id} className="bg-white rounded-xl shadow p-6 hover:shadow-lg transition">
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="text-xl font-bold text-gray-800">{course.title}</h3>
@@ -215,19 +332,26 @@ export default function AdminDashboard() {
                           <span>{course.lessons || 0} lessons</span>
                         </div>
                       </div>
-                      <button 
-                        onClick={() => {
-                          setSelectedCourse(course.id);
-                          setShowLessonModal(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-700 font-semibold"
-                      >
-                        Add Lesson
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleManageCourse(course)}
+                          className="text-slate-600 hover:text-blue-600 p-2 rounded hover:bg-slate-100 flex items-center gap-1"
+                        >
+                          <Settings size={18} /> Manage
+                        </button>
+                        <button 
+                          onClick={(e) => handleDeleteCourse(course.id, e)}
+                          className="text-red-400 hover:text-red-600 p-2 rounded hover:bg-red-50"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
+                </>
+              )}
             </>
           )}
 
