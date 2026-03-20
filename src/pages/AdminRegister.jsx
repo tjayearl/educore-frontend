@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, User, Eye, EyeOff, Shield, BookOpen } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Shield } from "lucide-react";
 import { authAPI } from "../services/api";
 
 export default function AdminRegister() {
@@ -45,13 +45,16 @@ export default function AdminRegister() {
         "admin" // Always register as admin
       );
       
+      console.log("Registration response:", data);
+      
       // Save token and user
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       
-      // Redirect to admin dashboard
+      // ✅ REDIRECT DIRECTLY TO ADMIN DASHBOARD (NO LOGIN NEEDED)
       navigate("/admin/dashboard");
     } catch (err) {
+      console.error("Registration error:", err);
       setError(err.message || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
