@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle, Circle, PlayCircle, FileText, Clock } from "lucide-react";
 import { coursesAPI, lessonsAPI, progressAPI } from "../services/api";
-import { handleAPIError } from "../utils/errorHandler";
+import { handleAPIError, showToast } from "../utils/errorHandler";
 
 export default function CourseDetails() {
   const { id } = useParams();
@@ -15,6 +15,12 @@ export default function CourseDetails() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
+      navigate("/login");
+      return;
+    }
+
     fetchCourseData();
   }, [id]);
 
@@ -26,13 +32,13 @@ export default function CourseDetails() {
         lessonsAPI.getAll(id)
       ]);
       
-      setCourse(courseData.course);
-      setLessons(lessonsData.lessons || []);
+      setCourse(courseData.course || courseData);
+      setLessons(lessonsData.lessons || lessonsData || []);
       
       // Fetch progress
       try {
         const progressData = await progressAPI.get(id);
-        setProgress(progressData.progress);
+        setProgress(progressData.progress || progressData);
       } catch (err) {
         // No progress yet
         setProgress({ completedLessons: [] });
@@ -52,7 +58,8 @@ export default function CourseDetails() {
         await progressAPI.markComplete(id, lessonId);
         // Refresh progress
         const progressData = await progressAPI.get(id);
-        setProgress(progressData.progress);
+        setProgress(progressData.progress || progressData);
+        showToast("Lesson completed!", "success");
       } catch (err) {
         handleAPIError(err, setError);
       }

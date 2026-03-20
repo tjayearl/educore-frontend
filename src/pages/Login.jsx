@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, LogIn, BookOpen } from "lucide-react";
 import { authAPI } from "../services/api";
+import { handleAPIError } from "../utils/errorHandler";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -16,20 +17,20 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const user = await authAPI.login(email, password);
+      const data = await authAPI.login(email, password);
       
-      if (user) {
-        if (user.role === "admin") {
-          setError("This portal is for students only. Please use the Admin Login.");
-          return;
-        }
-        localStorage.setItem("user", JSON.stringify(user));
-        navigate("/dashboard");
-      } else {
-        setError("Invalid email or password");
+      // Check role before logging in
+      if (data.user && data.user.role === "admin") {
+        setError("This portal is for students only. Please use the Admin Login.");
+        setLoading(false);
+        return;
       }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      navigate("/dashboard");
     } catch (err) {
-      setError("Login failed. Please try again.");
+      handleAPIError(err, setError);
     } finally {
       setLoading(false);
     }

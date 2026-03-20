@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, User, Eye, EyeOff, UserPlus, BookOpen } from "lucide-react";
 import { authAPI } from "../services/api";
+import { handleAPIError, showToast } from "../utils/errorHandler";
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -26,15 +27,16 @@ export default function Register() {
 
     try {
       if (formData.fullName && formData.email && formData.password) {
-        const user = await authAPI.register(formData);
-        localStorage.setItem("user", JSON.stringify(user));
-        
-        navigate("/dashboard");
+        const data = await authAPI.register(formData.fullName, formData.email, formData.password, formData.role);
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        showToast("Account created successfully!", "success");
+        navigate("/dashboard"); 
       } else {
         setError("Please fill all fields");
       }
     } catch (err) {
-      setError(err.message || "Registration failed");
+      handleAPIError(err, setError);
     } finally {
       setLoading(false);
     }

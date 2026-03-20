@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   BookOpen, Users, Activity, Plus, LogOut, 
   LayoutDashboard, X, FileText, Video
 } from "lucide-react";
 import { coursesAPI, lessonsAPI } from "../services/api";
+import { handleAPIError, showToast } from "../utils/errorHandler";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -12,17 +13,12 @@ export default function AdminDashboard() {
   const [showCourseModal, setShowCourseModal] = useState(false);
   const [showLessonModal, setShowLessonModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [adminUser, setAdminUser] = useState(null);
 
   // Initialize ALL state at the top
-  const [courses, setCourses] = useState([
-    { id: 1, title: "Introduction to JavaScript", category: "Programming", lessons: 12, students: 45 },
-    { id: 2, title: "Advanced React", category: "Frontend", lessons: 8, students: 32 }
-  ]);
-
-  const [activities] = useState([
-    { user: "John Doe", action: "Completed lesson", course: "JavaScript Basics", time: "5 min ago" },
-    { user: "Jane Smith", action: "Started course", course: "React Advanced", time: "12 min ago" }
-  ]);
+  const [courses, setCourses] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [courseForm, setCourseForm] = useState({
     title: "",
@@ -38,18 +34,28 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
+    const storedAdmin = localStorage.getItem("adminUser");
+    if (!storedAdmin) {
+      navigate("/admin/login");
+      return;
+    }
+    setAdminUser(JSON.parse(storedAdmin));
+
     const loadData = async () => {
         try {
+            setLoading(true);
             const coursesData = await coursesAPI.getAll();
-            setCourses(coursesData);
+            setCourses(Array.isArray(coursesData) ? coursesData : (coursesData.courses || []));
             const activityData = await activitiesAPI.getAll();
-            setActivities(activityData);
+            setActivities(Array.isArray(activityData) ? activityData : (activityData.activities || []));
         } catch (error) {
-            console.error("Failed to fetch data", error);
+            handleAPIError(error);
+        } finally {
+            setLoading(false);
         }
     };
     loadData();
-  }, []);
+  }, [navigate]);
 
   const handleCreateCourse = async (e) => {
     e.preventDefault();
@@ -59,11 +65,12 @@ export default function AdminDashboard() {
         courseForm.description,
         courseForm.category
       );
-      setCourses([...courses, data]);
+      setCourses([...courses, data.course || data]); // Handle if backend returns {course: ...} or just ...
       setCourseForm({ title: "", description: "", category: "" });
       setShowCourseModal(false);
+      showToast("Course created successfully", "success");
     } catch (err) {
-      alert("Failed to create course");
+      handleAPIError(err);
     }
   };
 
@@ -80,16 +87,18 @@ export default function AdminDashboard() {
       
       // Refresh courses to update lesson count
       const coursesData = await coursesAPI.getAll();
-      setCourses(coursesData);
+      setCourses(Array.isArray(coursesData) ? coursesData : (coursesData.courses || []));
 
       setLessonForm({ title: "", contentType: "text", contentUrl: "", contentBody: "" });
       setShowLessonModal(false);
+      showToast("Lesson added successfully", "success");
     } catch (err) {
-      alert("Failed to add lesson");
+      handleAPIError(err);
     }
   };
 
   const handleLogout = () => {
+    localStorage.removeItem("token");
     localStorage.removeItem("adminUser");
     navigate("/admin/login");
   };
@@ -159,7 +168,7 @@ export default function AdminDashboard() {
               {activeTab === "courses" && "My Courses"}
               {activeTab === "activities" && "User Activities"}
             </h2>
-            <p className="text-gray-500 mt-1">Welcome back, Admin</p>
+            <p className="text-gray-500 mt-1">Welcome back, {adminUser?.fullName || 'Admin'}</p>
           </div>
 
           {/* Dashboard Tab */}
@@ -171,12 +180,12 @@ export default function AdminDashboard() {
               </div>
               <div className="bg-white rounded-xl shadow p-6">
                 <p className="text-gray-500 text-sm">Total Students</p>
-                <p className="text-3xl font-bold text-gray-800 mt-2">248</p>
+                <p className="text-3xl font-bold text-gray-800 mt-2">-</p>
               </div>
               <div className="bg-white rounded-xl shadow p-6">
                 <p className="text-gray-500 text-sm">Total Lessons</p>
                 <p className="text-3xl font-bold text-gray-800 mt-2">
-                  {courses.reduce((sum, c) => sum + c.lessons, 0)}
+                  {courses.reduce((sum, c) => sum + (c.lessons || 0), 0)}
                 </p>
               </div>
             </div>
@@ -201,9 +210,9 @@ export default function AdminDashboard() {
                         <h3 className="text-xl font-bold text-gray-800">{course.title}</h3>
                         <p className="text-sm text-gray-500 mt-1">{course.category}</p>
                         <div className="flex gap-4 mt-2 text-sm text-gray-600">
-                          <span>{course.students} students</span>
-                          <span>•</span>
-                          <span>{course.lessons} lessons</span>
+                          {/* <span>{course.students} students</span> */}
+                          {/* <span>•</span> */}
+                          <span>{course.lessons || 0} lessons</span>
                         </div>
                       </div>
                       <button 
@@ -226,15 +235,22 @@ export default function AdminDashboard() {
           {activeTab === "activities" && (
             <div className="bg-white rounded-xl shadow p-6">
               <div className="space-y-4">
-                {activities.map((activity, idx) => (
-                  <div key={idx} className="flex justify-between border-b pb-4 last:border-0">
-                    <div>
-                      <p className="font-semibold text-gray-800">{activity.user}</p>
-                      <p className="text-sm text-gray-500">{activity.action} • {activity.course}</p>
+                {activities.length > 0 ? (
+                  activities.map((activity, idx) => (
+                    <div key={idx} className="flex justify-between border-b pb-4 last:border-0">
+                      <div>
+                        <p className="font-semibold text-gray-800">{activity.user_id || 'User'}</p>
+                        <p className="text-sm text-gray-500">{activity.action} {activity.details ? `• ${activity.details}` : ''}</p>
+                      </div>
+                      <span className="text-xs text-gray-400">{new Date(activity.created_at || Date.now()).toLocaleDateString()}</span>
                     </div>
-                    <span className="text-xs text-gray-400">{activity.time}</span>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    <Activity size={48} className="mx-auto mb-2 opacity-20" />
+                    No activities recorded yet
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}

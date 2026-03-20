@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, LogIn, Shield } from "lucide-react";
 import { authAPI } from "../services/api";
+import { handleAPIError } from "../utils/errorHandler";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -16,20 +17,18 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const user = await authAPI.login(email, password);
+      const data = await authAPI.login(email, password);
       
-      if (user) {
-        if (user.role === "admin") {
-          localStorage.setItem("adminUser", JSON.stringify(user));
-          navigate("/admin/dashboard");
-        } else {
-          setError("Access denied. Admin privileges required.");
-        }
-      } else {
-        setError("Invalid email or password");
+      if (data.user && data.user.role !== "admin") {
+        setError("Access denied. Admin privileges required.");
+        return;
       }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("adminUser", JSON.stringify(data.user));
+      navigate("/admin/dashboard");
     } catch (err) {
-      setError("Login failed. Please try again.");
+      handleAPIError(err, setError);
     } finally {
       setLoading(false);
     }

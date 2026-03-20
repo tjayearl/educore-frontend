@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { BookOpen, User, LogOut, Clock, Award, PlayCircle } from "lucide-react";
 import { coursesAPI } from "../services/api";
+import { handleAPIError } from "../utils/errorHandler";
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -21,9 +23,9 @@ export default function StudentDashboard() {
     const fetchCourses = async () => {
       try {
         const data = await coursesAPI.getAll();
-        setCourses(data);
+        setCourses(Array.isArray(data) ? data : (data.courses || []));
       } catch (err) {
-        console.error("Failed to load courses", err);
+        handleAPIError(err, setError);
       } finally {
         setLoading(false);
       }
@@ -33,6 +35,7 @@ export default function StudentDashboard() {
   }, [navigate]);
 
   const handleLogout = () => {
+    localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
   };
@@ -105,24 +108,35 @@ export default function StudentDashboard() {
         {/* Course List */}
         <h2 className="text-xl font-bold text-gray-800 mb-6">Available Courses</h2>
         {loading ? (
-          <p>Loading courses...</p>
+          <div className="text-center py-12">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading courses...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 text-red-600 p-4 rounded-lg">{error}</div>
+        ) : courses.length === 0 ? (
+          <p className="text-gray-500">No courses available at the moment.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map((course) => (
               <div key={course.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition">
                 <div className="h-32 bg-gray-200 w-full relative">
                    {/* Placeholder for course image */}
-                   <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                     <BookOpen size={40} />
+                   <div className="absolute inset-0 flex items-center justify-center bg-blue-50 text-blue-200">
+                     <BookOpen size={48} />
                    </div>
                 </div>
                 <div className="p-6">
-                  <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{course.category}</span>
-                  <h3 className="text-lg font-bold text-gray-800 mt-2 mb-2">{course.title}</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{course.category}</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-1">{course.title}</h3>
                   <p className="text-gray-500 text-sm line-clamp-2 mb-4">{course.description}</p>
                   
                   <div className="flex items-center justify-between mt-auto">
-                    <span className="text-xs text-gray-400">{course.lessons} Lessons</span>
+                    <span className="text-xs text-gray-400 font-medium">
+                      {course.lessons ? course.lessons.length : (course.lessonsCount || 0)} Lessons
+                    </span>
                     <Link to={`/course/${course.id}`} className="text-blue-600 font-semibold text-sm flex items-center gap-1 hover:underline">
                       Start Learning <PlayCircle size={16} />
                     </Link>

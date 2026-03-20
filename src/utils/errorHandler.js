@@ -1,25 +1,50 @@
 export const handleAPIError = (error, setError) => {
-  if (error.message === 'Failed to fetch') {
-    setError('Cannot connect to server. Please check your internet connection.');
-  } else if (error.status === 401) {
-    setError('Invalid credentials. Please try again.');
+  console.error("API Error:", error);
+  
+  let message = 'An unexpected error occurred. Please try again.';
+
+  if (!error) {
+    setError(message);
+    return;
+  }
+
+  // Network errors
+  if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+    message = 'Cannot connect to server. Please check your internet connection.';
+  } 
+  // HTTP Status errors
+  else if (error.status === 401) {
+    message = 'Invalid credentials or session expired.';
   } else if (error.status === 403) {
-    setError('You do not have permission to perform this action.');
+    message = 'Access denied. You do not have permission to perform this action.';
   } else if (error.status === 404) {
-    setError('Resource not found.');
+    message = 'The requested resource was not found.';
   } else if (error.status >= 500) {
-    setError('Server error. Please try again later.');
+    message = 'Server error. Our team has been notified.';
+  } else if (error.message) {
+    message = error.message;
+  }
+
+  if (setError) {
+    setError(message);
   } else {
-    setError(error.message || 'An unexpected error occurred.');
+    showToast(message, 'error');
   }
 };
 
 export const showToast = (message, type = 'error') => {
+  const existingToast = document.querySelector('.educore-toast');
+  if (existingToast) existingToast.remove();
+
   const toast = document.createElement('div');
-  toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
-    type === 'error' ? 'bg-red-500' : 'bg-green-500'
-  } text-white`;
+  toast.className = `educore-toast fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white font-medium transform transition-all duration-300 animate-fade-in-down ${
+    type === 'success' ? 'bg-green-600' : 'bg-red-600'
+  }`;
   toast.textContent = message;
+
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
 };

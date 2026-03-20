@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, User, Eye, EyeOff, Shield, UserPlus } from "lucide-react";
 import { authAPI } from "../services/api";
+import { handleAPIError, showToast } from "../utils/errorHandler";
 
 export default function AdminRegister() {
   const [formData, setFormData] = useState({
@@ -26,14 +27,16 @@ export default function AdminRegister() {
 
     try {
       if (formData.fullName && formData.email && formData.password) {
-        const user = await authAPI.register(formData);
-        localStorage.setItem("adminUser", JSON.stringify(user));
+        const data = await authAPI.register(formData.fullName, formData.email, formData.password, formData.role);
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("adminUser", JSON.stringify(data.user));
+        showToast("Admin account created!", "success");
         navigate("/admin/dashboard");
       } else {
         setError("Please fill all fields");
       }
     } catch (err) {
-      setError(err.message || "Registration failed");
+      handleAPIError(err, setError);
     } finally {
       setLoading(false);
     }
