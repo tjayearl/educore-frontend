@@ -37,6 +37,20 @@ export default function AdminDashboard() {
     contentBody: ""
   });
 
+  useEffect(() => {
+    const loadData = async () => {
+        try {
+            const coursesData = await coursesAPI.getAll();
+            setCourses(coursesData);
+            const activityData = await activitiesAPI.getAll();
+            setActivities(activityData);
+        } catch (error) {
+            console.error("Failed to fetch data", error);
+        }
+    };
+    loadData();
+  }, []);
+
   const handleCreateCourse = async (e) => {
     e.preventDefault();
     try {
@@ -45,7 +59,7 @@ export default function AdminDashboard() {
         courseForm.description,
         courseForm.category
       );
-      setCourses([...courses, data.course]);
+      setCourses([...courses, data]);
       setCourseForm({ title: "", description: "", category: "" });
       setShowCourseModal(false);
     } catch (err) {
@@ -63,6 +77,11 @@ export default function AdminDashboard() {
         lessonForm.contentUrl,
         lessonForm.contentBody
       );
+      
+      // Refresh courses to update lesson count
+      const coursesData = await coursesAPI.getAll();
+      setCourses(coursesData);
+
       setLessonForm({ title: "", contentType: "text", contentUrl: "", contentBody: "" });
       setShowLessonModal(false);
     } catch (err) {

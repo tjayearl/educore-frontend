@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, User, Eye, EyeOff, UserPlus, BookOpen } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Shield, UserPlus } from "lucide-react";
 import { authAPI } from "../services/api";
 
-export default function Register() {
+export default function AdminRegister() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
-    role: "learner" // Fixed role for student registration
+    role: "admin"
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -27,9 +27,8 @@ export default function Register() {
     try {
       if (formData.fullName && formData.email && formData.password) {
         const user = await authAPI.register(formData);
-        localStorage.setItem("user", JSON.stringify(user));
-        
-        navigate("/dashboard");
+        localStorage.setItem("adminUser", JSON.stringify(user));
+        navigate("/admin/dashboard");
       } else {
         setError("Please fill all fields");
       }
@@ -41,18 +40,18 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-600 to-red-600 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-lg mb-4">
-            <BookOpen className="text-purple-600" size={40} />
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-slate-800 rounded-full shadow-lg mb-4 border border-slate-700">
+            <Shield className="text-blue-500" size={40} />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">Join Educore</h1>
-          <p className="text-purple-100">Student Registration</p>
+          <h1 className="text-4xl font-bold text-white mb-2">Admin Access</h1>
+          <p className="text-slate-400">Create administrative account</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Create Student Account</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Register Admin</h2>
 
           {error && (
             <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded">
@@ -70,8 +69,8 @@ export default function Register() {
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                  placeholder="John Doe"
+                  className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
+                  placeholder="Admin Name"
                   required
                 />
               </div>
@@ -86,8 +85,8 @@ export default function Register() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                  placeholder="student@example.com"
+                  className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
+                  placeholder="admin@educore.com"
                   required
                 />
               </div>
@@ -102,7 +101,7 @@ export default function Register() {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                  className="w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
                   placeholder="••••••••"
                   required
                   minLength="6"
@@ -120,26 +119,16 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full bg-slate-800 text-white py-3 rounded-lg font-semibold hover:bg-slate-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Creating account...
-                </>
-              ) : (
-                <>
-                  <UserPlus className="mr-2 h-5 w-5" />
-                  Create Account
-                </>
-              )}
+              {loading ? "Creating..." : <><UserPlus className="h-5 w-5" /> Register Admin</>}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              Already have an account?{" "}
-              <Link to="/login" className="text-purple-600 font-semibold hover:underline">
+              Already have an admin account?{" "}
+              <Link to="/admin/login" className="text-slate-800 font-semibold hover:underline">
                 Sign In
               </Link>
             </p>
@@ -147,7 +136,7 @@ export default function Register() {
         </div>
 
         <div className="mt-6 text-center">
-          <Link to="/" className="text-purple-100 text-sm hover:underline">
+          <Link to="/" className="text-slate-500 text-sm hover:underline">
             ← Back to Home
           </Link>
         </div>

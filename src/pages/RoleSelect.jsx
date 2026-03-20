@@ -52,17 +52,6 @@ export default function RoleSelect() {
           </div>
         </div>
 
-        <div className="mt-12 text-center">
-          <p className="text-purple-100 text-sm">
-            Don't have an account?{" "}
-            <button 
-              onClick={() => navigate("/register")}
-              className="text-white font-semibold underline hover:text-purple-200"
-            >
-              Register here
-            </button>
-          </p>
-        </div>
       </div>
     </div>
   );

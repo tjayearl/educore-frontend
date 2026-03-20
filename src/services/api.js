@@ -3,11 +3,27 @@ const API_URL = 'https://educore-backend-7p4o.onrender.com/api';
 const getToken = () => localStorage.getItem('token');
 
 const handleResponse = async (response) => {
-  const data = await response.json();
-  if (!response.ok) {
-    throw { status: response.status, message: data.message || 'Request failed' };
+  const contentType = response.headers.get('content-type');
+  
+  if (contentType && contentType.includes('application/json')) {
+    const data = await response.json();
+    if (!response.ok) {
+      throw { 
+        status: response.status, 
+        message: data.message || data.error || 'Request failed' 
+      };
+    }
+    return data;
+  } else {
+    const text = await response.text();
+    if (!response.ok) {
+      throw { 
+        status: response.status, 
+        message: text || 'Request failed' 
+      };
+    }
+    return { message: text };
   }
-  return data;
 };
 
 export const authAPI = {
@@ -18,8 +34,9 @@ export const authAPI = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      return handleResponse(res);
+      return await handleResponse(res);
     } catch (err) {
+      console.error('Login error:', err);
       throw err;
     }
   },
@@ -31,8 +48,9 @@ export const authAPI = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fullName, email, password, role })
       });
-      return handleResponse(res);
+      return await handleResponse(res);
     } catch (err) {
+      console.error('Register error:', err);
       throw err;
     }
   }
@@ -41,11 +59,13 @@ export const authAPI = {
 export const coursesAPI = {
   getAll: async () => {
     try {
+      const token = getToken();
       const res = await fetch(`${API_URL}/courses`, {
-        headers: { 'Authorization': `Bearer ${getToken()}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      return handleResponse(res);
+      return await handleResponse(res);
     } catch (err) {
+      console.error('Get courses error:', err);
       throw err;
     }
   },
@@ -60,8 +80,9 @@ export const coursesAPI = {
         },
         body: JSON.stringify({ title, description, category })
       });
-      return handleResponse(res);
+      return await handleResponse(res);
     } catch (err) {
+      console.error('Create course error:', err);
       throw err;
     }
   },
@@ -71,8 +92,9 @@ export const coursesAPI = {
       const res = await fetch(`${API_URL}/courses/${id}`, {
         headers: { 'Authorization': `Bearer ${getToken()}` }
       });
-      return handleResponse(res);
+      return await handleResponse(res);
     } catch (err) {
+      console.error('Get course by ID error:', err);
       throw err;
     }
   }
@@ -84,8 +106,9 @@ export const lessonsAPI = {
       const res = await fetch(`${API_URL}/courses/${courseId}/lessons`, {
         headers: { 'Authorization': `Bearer ${getToken()}` }
       });
-      return handleResponse(res);
+      return await handleResponse(res);
     } catch (err) {
+      console.error('Get lessons error:', err);
       throw err;
     }
   },
@@ -100,8 +123,9 @@ export const lessonsAPI = {
         },
         body: JSON.stringify({ title, contentType, contentUrl, contentBody })
       });
-      return handleResponse(res);
+      return await handleResponse(res);
     } catch (err) {
+      console.error('Create lesson error:', err);
       throw err;
     }
   }
@@ -113,8 +137,9 @@ export const progressAPI = {
       const res = await fetch(`${API_URL}/progress/${courseId}`, {
         headers: { 'Authorization': `Bearer ${getToken()}` }
       });
-      return handleResponse(res);
+      return await handleResponse(res);
     } catch (err) {
+      console.error('Get progress error:', err);
       throw err;
     }
   },
@@ -125,8 +150,23 @@ export const progressAPI = {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${getToken()}` }
       });
-      return handleResponse(res);
+      return await handleResponse(res);
     } catch (err) {
+      console.error('Mark complete error:', err);
+      throw err;
+    }
+  }
+};
+
+export const activitiesAPI = {
+  getAll: async () => {
+    try {
+      const res = await fetch(`${API_URL}/activities/all`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+      return await handleResponse(res);
+    } catch (err) {
+      console.error('Get activities error:', err);
       throw err;
     }
   }
