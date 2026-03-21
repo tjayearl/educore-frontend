@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   BookOpen, Users, GraduationCap, LogOut, Shield,
-  Plus, X, Video, FileText, TrendingUp, Activity
+  Plus, X, Video, FileText, TrendingUp, Activity, Loader
 } from "lucide-react";
 import { coursesAPI, lessonsAPI, activitiesAPI } from "../services/api";
 
@@ -13,6 +13,8 @@ export default function AdminDashboard() {
   const [showCourseModal, setShowCourseModal] = useState(false);
   const [showLessonModal, setShowLessonModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   
   // Stats
   const [stats, setStats] = useState({
@@ -28,6 +30,7 @@ export default function AdminDashboard() {
     description: "",
     category: "Programming"
   });
+  const [courseError, setCourseError] = useState("");
 
   // Lessons
   const [lessonForm, setLessonForm] = useState({
@@ -36,6 +39,7 @@ export default function AdminDashboard() {
     contentUrl: "",
     contentBody: ""
   });
+  const [lessonError, setLessonError] = useState("");
 
   // Activities
   const [activities, setActivities] = useState([]);
@@ -47,21 +51,48 @@ export default function AdminDashboard() {
       return;
     }
     setUser(userData);
-    loadCourses();
+    loadDashboardData();
   }, [navigate]);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      await loadCourses();
+      if (activeTab === "activities") {
+        await loadActivities();
+      }
+    } catch (err) {
+      console.error("Error loading dashboard:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadCourses = async () => {
     try {
       const data = await coursesAPI.getAll();
       setCourses(data.courses || []);
+      
+      // Calculate stats
+      const totalLessons = data.courses?.reduce((sum, c) => sum + parseInt(c.total_lessons || 0), 0) || 0;
       setStats({
         totalCourses: data.courses?.length || 0,
-        totalStudents: 248,
-        totalLessons: 84
+        totalStudents: 248, // Mock data
+        totalLessons
       });
     } catch (err) {
       console.error("Error loading courses:", err);
       setCourses([]);
+    }
+  };
+
+  const loadActivities = async () => {
+    try {
+      const data = await activitiesAPI.getAll();
+      setActivities(data.activities || []);
+    } catch (err) {
+      console.error("Error loading activities:", err);
+      setActivities([]);
     }
   };
 
@@ -73,17 +104,38 @@ export default function AdminDashboard() {
         courseForm.description,
         courseForm.category
       );
+      
       setShowCourseModal(false);
       setCourseForm({ title: "", description: "", category: "Programming" });
-      loadCourses();
+      await loadCourses();
     } catch (err) {
-      alert(err.message || "Failed to create course");
+      setCourseError(err.message || "Failed to create course");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleCreateLesson = async (e) => {
     e.preventDefault();
+    setLessonError("");
+    
+    if (!lessonForm.title.trim()) {
+      setLessonError("Title is required");
+      return;
+    }
+
+    if (lessonForm.contentType === "video" && !lessonForm.contentUrl.trim()) {
+      setLessonError("Video URL is required");
+      return;
+    }
+
+    if (lessonForm.contentType === "text" && !lessonForm.contentBody.trim()) {
+      setLessonError("Text content is required");
+      return;
+    }
+
     try {
+      setSubmitting(true);
       await lessonsAPI.create(
         selectedCourse.id,
         lessonForm.title,
@@ -91,6 +143,7 @@ export default function AdminDashboard() {
         lessonForm.contentUrl,
         lessonForm.contentBody
       );
+      
       setShowLessonModal(false);
       setLessonForm({
         title: "",
@@ -98,9 +151,11 @@ export default function AdminDashboard() {
         contentUrl: "",
         contentBody: ""
       });
-      loadCourses();
+      await loadCourses();
     } catch (err) {
-      alert(err.message || "Failed to create lesson");
+      setLessonError(err.message || "Failed to create lesson");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -109,6 +164,20 @@ export default function AdminDashboard() {
     localStorage.removeItem("user");
     navigate("/admin/login");
   };
+
+  useEffect(() => {
+    if (activeTab === "activities" && activities.length === 0) {
+      loadActivities();
+    }
+  }, [activeTab]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader className="w-12 h-12 text-slate-600 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -134,7 +203,7 @@ export default function AdminDashboard() {
           </div>
 
           <nav className="space-y-2">
-            <button
+            <button 
               onClick={() => setActiveTab("dashboard")}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
                 activeTab === "dashboard" ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800"
@@ -143,7 +212,7 @@ export default function AdminDashboard() {
               <TrendingUp size={20} />
               Dashboard
             </button>
-            <button
+            <button 
               onClick={() => setActiveTab("courses")}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
                 activeTab === "courses" ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800"
@@ -152,7 +221,7 @@ export default function AdminDashboard() {
               <BookOpen size={20} />
               My Courses
             </button>
-            <button
+            <button 
               onClick={() => setActiveTab("activities")}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg ${
                 activeTab === "activities" ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-800"
@@ -161,14 +230,17 @@ export default function AdminDashboard() {
               <Activity size={20} />
               User Activities
             </button>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-slate-800 rounded-lg transition"
-            >
-              <LogOut size={20} />
-              Logout
-            </button>
           </nav>
+        </div>
+
+        <div className="absolute bottom-6 left-6 right-6">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
+          >
+            <LogOut size={20} />
+            Logout
+          </button>
         </div>
       </div>
 
@@ -280,10 +352,10 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span>0 lessons</span>
+                      <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                        <span>{course.total_lessons || 0} lessons</span>
                         <span>•</span>
-                        <span>0 students</span>
+                        <span>Created {new Date(course.created_at).toLocaleDateString()}</span>
                       </div>
                       <button
                         onClick={() => {
@@ -306,35 +378,38 @@ export default function AdminDashboard() {
             <>
               <h2 className="text-3xl font-bold text-gray-800 mb-8">User Activities</h2>
               <div className="bg-white rounded-xl shadow p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4 pb-4 border-b">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Users className="text-blue-600" size={20} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">John Doe enrolled in JavaScript Basics</p>
-                      <p className="text-sm text-gray-500">2 hours ago</p>
-                    </div>
+                {activities.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Activity className="mx-auto text-gray-400 mb-4" size={48} />
+                    <p className="text-gray-500">No activities yet</p>
                   </div>
-                  <div className="flex items-center gap-4 pb-4 border-b">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                      <GraduationCap className="text-green-600" size={20} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">Jane Smith completed React Fundamentals</p>
-                      <p className="text-sm text-gray-500">5 hours ago</p>
-                    </div>
+                ) : (
+                  <div className="space-y-4">
+                    {activities.map((activity) => (
+                      <div key={activity.id} className="flex items-center gap-4 pb-4 border-b last:border-0">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          activity.success ? 'bg-green-100' : 'bg-red-100'
+                        }`}>
+                          <Activity className={activity.success ? 'text-green-600' : 'text-red-600'} size={20} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-800">
+                            {activity.user_name || 'Unknown User'} - {activity.action.replace(/_/g, ' ')}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                            <span>{activity.user_email}</span>
+                            <span>•</span>
+                            <span>{new Date(activity.created_at).toLocaleString()}</span>
+                            <span>•</span>
+                            <span className={activity.success ? 'text-green-600' : 'text-red-600'}>
+                              Status: {activity.status_code}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                      <BookOpen className="text-purple-600" size={20} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">Mike Johnson started Node.js Backend</p>
-                      <p className="text-sm text-gray-500">1 day ago</p>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             </>
           )}
@@ -347,11 +422,19 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
             <div className="flex items-center justify-between p-6 border-b">
               <h3 className="text-xl font-bold">Create New Course</h3>
-              <button onClick={() => setShowCourseModal(false)}>
+              <button onClick={() => {
+                setShowCourseModal(false);
+                setCourseError("");
+              }}>
                 <X className="text-gray-400 hover:text-gray-600" size={24} />
               </button>
             </div>
             <form onSubmit={handleCreateCourse} className="p-6 space-y-4">
+              {courseError && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                  <p className="text-sm text-red-700">{courseError}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Course Title *</label>
                 <input
@@ -390,9 +473,17 @@ export default function AdminDashboard() {
               </div>
               <button
                 type="submit"
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700"
+                disabled={submitting}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                Create Course
+                {submitting ? (
+                  <>
+                    <Loader className="animate-spin" size={20} />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Course'
+                )}
               </button>
             </form>
           </div>
@@ -405,11 +496,19 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
             <div className="flex items-center justify-between p-6 border-b">
               <h3 className="text-xl font-bold">Add Lesson to {selectedCourse?.title}</h3>
-              <button onClick={() => setShowLessonModal(false)}>
+              <button onClick={() => {
+                setShowLessonModal(false);
+                setLessonError("");
+              }}>
                 <X className="text-gray-400 hover:text-gray-600" size={24} />
               </button>
             </div>
             <form onSubmit={handleCreateLesson} className="p-6 space-y-4">
+              {lessonError && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                  <p className="text-sm text-red-700">{lessonError}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Lesson Title *</label>
                 <input
@@ -458,7 +557,7 @@ export default function AdminDashboard() {
                     value={lessonForm.contentUrl}
                     onChange={(e) => setLessonForm({...lessonForm, contentUrl: e.target.value})}
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="https://youtube.com/..."
+                    placeholder="https://youtube.com/watch?v=..."
                     required
                   />
                 </div>
@@ -477,9 +576,17 @@ export default function AdminDashboard() {
               )}
               <button
                 type="submit"
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700"
+                disabled={submitting}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                Add Lesson
+                {submitting ? (
+                  <>
+                    <Loader className="animate-spin" size={20} />
+                    Adding...
+                  </>
+                ) : (
+                  'Add Lesson'
+                )}
               </button>
             </form>
           </div>
