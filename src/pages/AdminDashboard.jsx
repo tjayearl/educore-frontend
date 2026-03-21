@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   BookOpen, Users, GraduationCap, LogOut, Shield,
-  Plus, X, Video, FileText, TrendingUp, Activity, Loader
+  Plus, X, Video, FileText, TrendingUp, Activity, Loader,
+  Edit, Trash2
 } from "lucide-react";
 import { coursesAPI, lessonsAPI, activitiesAPI } from "../services/api";
 
@@ -12,7 +13,10 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showCourseModal, setShowCourseModal] = useState(false);
   const [showLessonModal, setShowLessonModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [courseToDelete, setCourseToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
@@ -98,7 +102,15 @@ export default function AdminDashboard() {
 
   const handleCreateCourse = async (e) => {
     e.preventDefault();
+    setCourseError("");
+    
+    if (!courseForm.title.trim() || !courseForm.description.trim()) {
+      setCourseError("Title and description are required");
+      return;
+    }
+
     try {
+      setSubmitting(true);
       await coursesAPI.create(
         courseForm.title,
         courseForm.description,
@@ -113,6 +125,65 @@ export default function AdminDashboard() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleEditCourse = async (e) => {
+    e.preventDefault();
+    setCourseError("");
+    
+    if (!courseForm.title.trim() || !courseForm.description.trim()) {
+      setCourseError("Title and description are required");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await coursesAPI.update(
+        selectedCourse.id,
+        courseForm.title,
+        courseForm.description,
+        courseForm.category
+      );
+      
+      setShowEditModal(false);
+      setSelectedCourse(null);
+      setCourseForm({ title: "", description: "", category: "Programming" });
+      await loadCourses();
+    } catch (err) {
+      setCourseError(err.message || "Failed to update course");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteCourse = async () => {
+    try {
+      setSubmitting(true);
+      await coursesAPI.delete(courseToDelete.id);
+      
+      setShowDeleteConfirm(false);
+      setCourseToDelete(null);
+      await loadCourses();
+    } catch (err) {
+      alert(err.message || "Failed to delete course");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openEditModal = (course) => {
+    setSelectedCourse(course);
+    setCourseForm({
+      title: course.title,
+      description: course.description,
+      category: course.category
+    });
+    setShowEditModal(true);
+  };
+
+  const openDeleteConfirm = (course) => {
+    setCourseToDelete(course);
+    setShowDeleteConfirm(true);
   };
 
   const handleCreateLesson = async (e) => {
@@ -351,6 +422,22 @@ export default function AdminDashboard() {
                             {course.category}
                           </span>
                         </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openEditModal(course)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            title="Edit course"
+                          >
+                            <Edit size={20} />
+                          </button>
+                          <button
+                            onClick={() => openDeleteConfirm(course)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                            title="Delete course"
+                          >
+                            <Trash2 size={20} />
+                          </button>
+                        </div>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
                         <span>{course.total_lessons || 0} lessons</span>
@@ -486,6 +573,123 @@ export default function AdminDashboard() {
                 )}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Course Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-xl font-bold">Edit Course</h3>
+              <button onClick={() => {
+                setShowEditModal(false);
+                setCourseError("");
+                setSelectedCourse(null);
+              }}>
+                <X className="text-gray-400 hover:text-gray-600" size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleEditCourse} className="p-6 space-y-4">
+              {courseError && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                  <p className="text-sm text-red-700">{courseError}</p>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Course Title *</label>
+                <input
+                  type="text"
+                  value={courseForm.title}
+                  onChange={(e) => setCourseForm({...courseForm, title: e.target.value})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Introduction to JavaScript"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Description *</label>
+                <textarea
+                  value={courseForm.description}
+                  onChange={(e) => setCourseForm({...courseForm, description: e.target.value})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  rows="3"
+                  placeholder="Learn the fundamentals of JavaScript programming"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Category *</label>
+                <select
+                  value={courseForm.category}
+                  onChange={(e) => setCourseForm({...courseForm, category: e.target.value})}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="Programming">Programming</option>
+                  <option value="Design">Design</option>
+                  <option value="Business">Business</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Data Science">Data Science</option>
+                </select>
+              </div>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <Loader className="animate-spin" size={20} />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Course'
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="text-red-600" size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Delete Course?</h3>
+              <p className="text-gray-600 mb-2">Are you sure you want to delete <strong>{courseToDelete?.title}</strong>?</p>
+              <p className="text-sm text-red-600 mb-6">This will also delete all lessons and student progress for this course. This action cannot be undone.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setCourseToDelete(null);
+                  }}
+                  disabled={submitting}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteCourse}
+                  disabled={submitting}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader className="animate-spin" size={16} />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete Course'
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

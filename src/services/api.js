@@ -87,14 +87,19 @@ export const coursesAPI = {
     }
   },
   
-  getById: async (id) => {
+  update: async (id, title, description, category) => {
     try {
       const res = await fetch(`${API_URL}/courses/${id}`, {
-        headers: { 'Authorization': `Bearer ${getToken()}` }
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({ title, description, category })
       });
       return await handleResponse(res);
     } catch (err) {
-      console.error('Get course by ID error:', err);
+      console.error('Update course error:', err);
       throw err;
     }
   },
@@ -108,6 +113,18 @@ export const coursesAPI = {
       return await handleResponse(res);
     } catch (err) {
       console.error('Delete course error:', err);
+      throw err;
+    }
+  },
+  
+  getById: async (id) => {
+    try {
+      const res = await fetch(`${API_URL}/courses/${id}`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+      return await handleResponse(res);
+    } catch (err) {
+      console.error('Get course by ID error:', err);
       throw err;
     }
   }
