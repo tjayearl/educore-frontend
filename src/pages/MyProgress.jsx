@@ -1,288 +1,164 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  BookOpen, TrendingUp, Award, LogOut, ArrowLeft,
-  CheckCircle, Trophy, Target, Calendar
-} from "lucide-react";
+import { ArrowLeft, Award, TrendingUp, BookOpen, Loader } from "lucide-react";
+import { progressAPI } from "../services/api";
 
 export default function MyProgress() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-
-  const [stats] = useState({
-    totalCourses: 4,
-    completedCourses: 1,
-    totalLessons: 45,
-    completedLessons: 18,
-    totalHours: 24,
-    streakDays: 7,
-    certificatesEarned: 1
+  const [progressData, setProgressData] = useState([]);
+  const [stats, setStats] = useState({
+    totalCourses: 0,
+    completedCourses: 0,
+    totalLessons: 0,
+    completedLessons: 0,
+    overallProgress: 0
   });
-
-  const [courseProgress] = useState([
-    {
-      id: 1,
-      title: "Introduction to JavaScript",
-      progress: 67,
-      completedLessons: 8,
-      totalLessons: 12,
-      status: "in-progress",
-      lastActivity: "2 hours ago"
-    },
-    {
-      id: 2,
-      title: "Web Design Fundamentals",
-      progress: 100,
-      completedLessons: 8,
-      totalLessons: 8,
-      status: "completed",
-      lastActivity: "1 day ago"
-    },
-    {
-      id: 3,
-      title: "Python for Beginners",
-      progress: 20,
-      completedLessons: 2,
-      totalLessons: 10,
-      status: "in-progress",
-      lastActivity: "3 days ago"
-    },
-    {
-      id: 4,
-      title: "React Advanced Patterns",
-      progress: 0,
-      completedLessons: 0,
-      totalLessons: 15,
-      status: "not-started",
-      lastActivity: "Never"
-    }
-  ]);
-
-  const [recentActivity] = useState([
-    { lesson: "JavaScript Functions", course: "Introduction to JavaScript", date: "Today, 2:30 PM", status: "completed" },
-    { lesson: "CSS Grid Layout", course: "Web Design Fundamentals", date: "Yesterday, 4:15 PM", status: "completed" },
-    { lesson: "Python Variables", course: "Python for Beginners", date: "3 days ago", status: "completed" },
-    { lesson: "JavaScript Arrays", course: "Introduction to JavaScript", date: "3 days ago", status: "completed" }
-  ]);
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem("user"));
     setUser(userData);
+    loadProgress();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
+  const loadProgress = async () => {
+    try {
+      setLoading(true);
+      const data = await progressAPI.getAllProgress();
+      const progress = data.progress || [];
+      setProgressData(progress);
+
+      // Calculate stats
+      const totalLessons = progress.reduce((sum, p) => sum + p.totalLessons, 0);
+      const completedLessons = progress.reduce((sum, p) => sum + p.completedLessons, 0);
+      const completedCourses = progress.filter(p => p.percentage === 100).length;
+      const avgProgress = progress.length > 0
+        ? Math.round(progress.reduce((sum, p) => sum + p.percentage, 0) / progress.length)
+        : 0;
+
+      setStats({
+        totalCourses: progress.length,
+        completedCourses,
+        totalLessons,
+        completedLessons,
+        overallProgress: avgProgress
+      });
+    } catch (err) {
+      console.error("Error loading progress:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const overallProgress = Math.round((stats.completedLessons / stats.totalLessons) * 100);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader className="w-12 h-12 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg">
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-8">
-            <BookOpen className="text-blue-600" size={32} />
-            <div>
-              <h1 className="text-xl font-bold">Educore LMS</h1>
-              <p className="text-xs text-gray-500">Student Portal</p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto p-8">
+        <button 
+          onClick={() => navigate("/dashboard")}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-6"
+        >
+          <ArrowLeft size={20} />
+          Back to Dashboard
+        </button>
 
-          <div className="mb-6">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-2">
-              <span className="text-blue-600 font-bold text-lg">
-                {user?.fullName?.charAt(0) || 'S'}
-              </span>
-            </div>
-            <p className="font-semibold text-gray-800">{user?.fullName || 'Student'}</p>
-            <p className="text-xs text-gray-500">{user?.email}</p>
-          </div>
+        <h1 className="text-4xl font-bold text-gray-800 mb-2">My Progress</h1>
+        <p className="text-gray-500 mb-8">Track your learning journey, {user?.full_name?.split(' ')[0]}!</p>
 
-          <nav className="space-y-2">
-            <button 
-              onClick={() => navigate("/dashboard")}
-              className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg"
-            >
-              <TrendingUp size={20} />
-              Dashboard
-            </button>
-            <button 
-              onClick={() => navigate("/my-courses")}
-              className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg"
-            >
-              <BookOpen size={20} />
-              My Courses
-            </button>
-            <button className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-600 rounded-lg font-medium">
-              <Award size={20} />
-              My Progress
-            </button>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition"
-            >
-              <LogOut size={20} />
-              Logout
-            </button>
-          </nav>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-8">
-          {/* Header */}
-          <div className="mb-8">
-            <button 
-              onClick={() => navigate("/dashboard")}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4"
-            >
-              <ArrowLeft size={20} />
-              Back to Dashboard
-            </button>
-            <h2 className="text-3xl font-bold text-gray-800">My Progress</h2>
-            <p className="text-gray-500 mt-1">Track your learning journey and achievements</p>
-          </div>
-
-          {/* Overall Stats */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg p-8 mb-8 text-white">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-xl font-semibold mb-2">Overall Progress</h3>
-                <p className="text-blue-100">Keep up the great work!</p>
-              </div>
-              <Trophy size={48} className="opacity-80" />
-            </div>
-            <div className="mb-4">
-              <div className="flex justify-between text-sm mb-2">
-                <span>{stats.completedLessons}/{stats.totalLessons} lessons completed</span>
-                <span className="font-bold">{overallProgress}%</span>
-              </div>
-              <div className="w-full bg-white bg-opacity-30 rounded-full h-4">
-                <div 
-                  className="bg-white h-4 rounded-full transition-all"
-                  style={{ width: `${overallProgress}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="text-green-600" size={20} />
-                </div>
-                <p className="text-gray-500 text-sm">Completed</p>
-              </div>
-              <p className="text-2xl font-bold text-gray-800">{stats.completedCourses}/{stats.totalCourses}</p>
-              <p className="text-xs text-gray-500 mt-1">Courses finished</p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Target className="text-blue-600" size={20} />
-                </div>
-                <p className="text-gray-500 text-sm">Study Time</p>
-              </div>
-              <p className="text-2xl font-bold text-gray-800">{stats.totalHours}h</p>
-              <p className="text-xs text-gray-500 mt-1">Total hours</p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Calendar className="text-orange-600" size={20} />
-                </div>
-                <p className="text-gray-500 text-sm">Streak</p>
-              </div>
-              <p className="text-2xl font-bold text-gray-800">{stats.streakDays}</p>
-              <p className="text-xs text-gray-500 mt-1">Day streak</p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Trophy className="text-purple-600" size={20} />
-                </div>
-                <p className="text-gray-500 text-sm">Certificates</p>
-              </div>
-              <p className="text-2xl font-bold text-gray-800">{stats.certificatesEarned}</p>
-              <p className="text-xs text-gray-500 mt-1">Earned</p>
-            </div>
-          </div>
-
-          {/* Course Progress */}
-          <div className="bg-white rounded-xl shadow p-6 mb-8">
-            <h3 className="text-xl font-bold text-gray-800 mb-6">Course Progress</h3>
-            <div className="space-y-4">
-              {courseProgress.map((course) => (
-                <div key={course.id} className="border-b pb-4 last:border-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-800">{course.title}</h4>
-                      <p className="text-xs text-gray-500">Last activity: {course.lastActivity}</p>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      course.status === "completed" ? "bg-green-100 text-green-700" :
-                      course.status === "in-progress" ? "bg-blue-100 text-blue-700" :
-                      "bg-gray-100 text-gray-700"
-                    }`}>
-                      {course.status === "completed" ? "Completed" :
-                       course.status === "in-progress" ? "In Progress" :
-                       "Not Started"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-1">
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>{course.completedLessons}/{course.totalLessons} lessons</span>
-                        <span className="font-semibold">{course.progress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full transition-all ${
-                            course.progress === 100 ? 'bg-green-500' : 'bg-blue-600'
-                          }`}
-                          style={{ width: `${course.progress}%` }}
-                        />
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => navigate(`/course/${course.id}`)}
-                      className="text-blue-600 font-semibold text-sm hover:text-blue-700 whitespace-nowrap"
-                    >
-                      View →
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Recent Activity */}
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-6">Recent Activity</h3>
-            <div className="space-y-4">
-              {recentActivity.map((activity, idx) => (
-                <div key={idx} className="flex items-center gap-4 pb-4 border-b last:border-0">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="text-green-600" size={20} />
+            <div className="flex items-center gap-3 mb-2">
+              <BookOpen className="text-blue-600" size={24} />
+              <p className="text-gray-500 text-sm">Courses Started</p>
+            </div>
+            <p className="text-3xl font-bold text-gray-800">{stats.totalCourses}</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Award className="text-green-600" size={24} />
+              <p className="text-gray-500 text-sm">Courses Completed</p>
+            </div>
+            <p className="text-3xl font-bold text-gray-800">{stats.completedCourses}</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <TrendingUp className="text-purple-600" size={24} />
+              <p className="text-gray-500 text-sm">Lessons Completed</p>
+            </div>
+            <p className="text-3xl font-bold text-gray-800">{stats.completedLessons}/{stats.totalLessons}</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <TrendingUp className="text-orange-600" size={24} />
+              <p className="text-gray-500 text-sm">Overall Progress</p>
+            </div>
+            <p className="text-3xl font-bold text-gray-800">{stats.overallProgress}%</p>
+          </div>
+        </div>
+
+        {/* Progress by Course */}
+        <div className="bg-white rounded-xl shadow p-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Progress by Course</h2>
+          
+          {progressData.length === 0 ? (
+            <div className="text-center py-12">
+              <BookOpen className="mx-auto text-gray-400 mb-4" size={48} />
+              <p className="text-gray-500 mb-4">You haven't started any courses yet.</p>
+              <button
+                onClick={() => navigate("/dashboard")}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Browse Courses
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {progressData.map((item) => (
+                <div key={item.courseId} className="border-b last:border-0 pb-6 last:pb-0">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="font-bold text-gray-800 text-lg">{item.courseTitle}</h3>
+                      <p className="text-sm text-gray-500">
+                        {item.completedLessons}/{item.totalLessons} lessons completed
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-gray-800">{item.percentage}%</p>
+                      {item.percentage === 100 && (
+                        <span className="text-xs text-green-600 font-semibold">✓ Completed</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-800">{activity.lesson}</p>
-                    <p className="text-sm text-gray-500">{activity.course}</p>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div 
+                      className={`h-3 rounded-full transition-all ${
+                        item.percentage === 100 ? 'bg-green-500' : 'bg-blue-600'
+                      }`}
+                      style={{ width: `${item.percentage}%` }}
+                    />
                   </div>
-                  <p className="text-xs text-gray-400 whitespace-nowrap">{activity.date}</p>
+                  <button
+                    onClick={() => navigate(`/course/${item.courseId}`)}
+                    className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-semibold"
+                  >
+                    Continue Course →
+                  </button>
                 </div>
               ))}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
