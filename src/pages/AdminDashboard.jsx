@@ -5,7 +5,7 @@ import {
   Plus, X, Video, FileText, TrendingUp, Activity, Loader,
   Edit, Trash2
 } from "lucide-react";
-import { coursesAPI, lessonsAPI, activitiesAPI } from "../services/api";
+import { coursesAPI, lessonsAPI, activitiesAPI, statsAPI } from "../services/api";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -74,15 +74,18 @@ export default function AdminDashboard() {
 
   const loadCourses = async () => {
     try {
-      const data = await coursesAPI.getAll();
-      setCourses(data.courses || []);
+      const [coursesData, statsData] = await Promise.all([
+        coursesAPI.getAll(),
+        statsAPI.getAdminStats()
+      ]);
       
-      // Calculate stats
-      const totalLessons = data.courses?.reduce((sum, c) => sum + parseInt(c.total_lessons || 0), 0) || 0;
+      setCourses(coursesData.courses || []);
+      
+      // Use REAL stats from backend
       setStats({
-        totalCourses: data.courses?.length || 0,
-        totalStudents: 248, // Mock data
-        totalLessons
+        totalCourses: statsData.stats.totalCourses,
+        totalStudents: statsData.stats.totalStudents,
+        totalLessons: statsData.stats.totalLessons
       });
     } catch (err) {
       console.error("Error loading courses:", err);

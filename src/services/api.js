@@ -226,3 +226,17 @@ export const activitiesAPI = {
     }
   }
 };
+
+export const statsAPI = {
+  getAdminStats: async () => {
+    try {
+      const res = await fetch(`${API_URL}/stats/admin`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+      return await handleResponse(res);
+    } catch (err) {
+      console.error('Get admin stats error:', err);
+      throw err;
+    }
+  }
+};
