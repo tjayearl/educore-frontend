@@ -2,50 +2,25 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   BookOpen, TrendingUp, Award, LogOut, Search, Filter,
-  ChevronRight, User
+  ChevronRight, Loader
 } from "lucide-react";
-import { coursesAPI } from "../services/api";
+import { coursesAPI, progressAPI } from "../services/api";
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [loading, setLoading] = useState(true);
   
-  const [stats] = useState({
-    enrolledCourses: 3,
-    completedLessons: 18,
-    averageProgress: 67
+  const [stats, setStats] = useState({
+    enrolledCourses: 0,
+    completedLessons: 0,
+    averageProgress: 0
   });
 
-  const [myCourses] = useState([
-    {
-      id: 1,
-      title: "Introduction to JavaScript",
-      category: "Programming",
-      totalLessons: 12,
-      completedLessons: 8,
-      progress: 67
-    },
-    {
-      id: 2,
-      title: "Web Design Fundamentals",
-      category: "Design",
-      totalLessons: 8,
-      completedLessons: 8,
-      progress: 100
-    },
-    {
-      id: 3,
-      title: "Python for Beginners",
-      category: "Programming",
-      totalLessons: 10,
-      completedLessons: 2,
-      progress: 20
-    }
-  ]);
-
   const [allCourses, setAllCourses] = useState([]);
+  const [userProgress, setUserProgress] = useState([]);
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem("user"));
@@ -54,16 +29,36 @@ export default function StudentDashboard() {
       return;
     }
     setUser(userData);
-    loadAllCourses();
+    loadData();
   }, [navigate]);
 
-  const loadAllCourses = async () => {
+  const loadData = async () => {
     try {
-      const data = await coursesAPI.getAll();
-      setAllCourses(data.courses || []);
+      setLoading(true);
+      
+      // Load all courses
+      const coursesData = await coursesAPI.getAll();
+      setAllCourses(coursesData.courses || []);
+
+      // Load user's personal progress
+      const progressData = await progressAPI.getAllProgress();
+      setUserProgress(progressData.progress || []);
+
+      // Calculate real stats from user's data
+      const totalCompleted = progressData.progress?.reduce((sum, p) => sum + p.completedLessons, 0) || 0;
+      const avgProgress = progressData.progress?.length > 0
+        ? Math.round(progressData.progress.reduce((sum, p) => sum + p.percentage, 0) / progressData.progress.length)
+        : 0;
+
+      setStats({
+        enrolledCourses: progressData.progress?.length || 0,
+        completedLessons: totalCompleted,
+        averageProgress: avgProgress
+      });
     } catch (err) {
-      console.error("Error loading courses:", err);
-      setAllCourses([]);
+      console.error("Error loading data:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,13 +68,36 @@ export default function StudentDashboard() {
     navigate("/login");
   };
 
-  const filteredCourses = allCourses.filter(course => {
+  // Merge courses with user's progress
+  const coursesWithProgress = allCourses.map(course => {
+    const progress = userProgress.find(p => p.courseId === course.id);
+    return {
+      ...course,
+      completedLessons: progress?.completedLessons || 0,
+      totalLessons: progress?.totalLessons || parseInt(course.total_lessons) || 0,
+      progress: progress?.percentage || 0
+    };
+  });
+
+  // Only show courses where user has made progress
+  const myCourses = coursesWithProgress.filter(c => c.completedLessons > 0 || c.progress > 0);
+
+  // Filter all courses for browsing
+  const filteredCourses = coursesWithProgress.filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === "all" || course.category === filterCategory;
     return matchesSearch && matchesCategory;
   });
 
   const categories = ["all", "Programming", "Design", "Business", "Marketing", "Data Science"];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader className="w-12 h-12 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -143,7 +161,7 @@ export default function StudentDashboard() {
             <p className="text-gray-500 mt-1">Continue your learning journey</p>
           </div>
 
-          {/* Stats */}
+          {/* Stats - NOW DYNAMIC! */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow p-6">
               <p className="text-gray-500 text-sm">Courses Enrolled</p>
@@ -159,41 +177,43 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          {/* My Courses */}
-          <div className="mb-8">
-            <h3 className="text-2xl font-bold text-gray-800 mb-4">My Courses</h3>
-            <div className="grid gap-4">
-              {myCourses.map((course) => (
-                <div 
-                  key={course.id}
-                  onClick={() => navigate(`/course/${course.id}`)}
-                  className="bg-white rounded-xl shadow p-6 hover:shadow-lg transition cursor-pointer"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex-1">
-                      <h4 className="text-lg font-bold text-gray-800">{course.title}</h4>
-                      <span className="text-sm text-gray-500">{course.category}</span>
+          {/* My Courses - NOW DYNAMIC! */}
+          {myCourses.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-2xl font-bold text-gray-800 mb-4">My Courses</h3>
+              <div className="grid gap-4">
+                {myCourses.map((course) => (
+                  <div 
+                    key={course.id}
+                    onClick={() => navigate(`/course/${course.id}`)}
+                    className="bg-white rounded-xl shadow p-6 hover:shadow-lg transition cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex-1">
+                        <h4 className="text-lg font-bold text-gray-800">{course.title}</h4>
+                        <span className="text-sm text-gray-500">{course.category}</span>
+                      </div>
+                      <ChevronRight className="text-gray-400" size={24} />
                     </div>
-                    <ChevronRight className="text-gray-400" size={24} />
+                    <div>
+                      <div className="flex justify-between text-sm text-gray-600 mb-2">
+                        <span>{course.completedLessons}/{course.totalLessons} lessons completed</span>
+                        <span className="font-semibold">{course.progress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all ${
+                            course.progress === 100 ? 'bg-green-500' : 'bg-blue-600'
+                          }`}
+                          style={{ width: `${course.progress}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="flex justify-between text-sm text-gray-600 mb-2">
-                      <span>{course.completedLessons}/{course.totalLessons} lessons completed</span>
-                      <span className="font-semibold">{course.progress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all ${
-                          course.progress === 100 ? 'bg-green-500' : 'bg-blue-600'
-                        }`}
-                        style={{ width: `${course.progress}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Browse Courses */}
           <div>
@@ -242,15 +262,29 @@ export default function StudentDashboard() {
                     className="bg-white rounded-xl shadow p-6 hover:shadow-lg transition cursor-pointer"
                   >
                     <h4 className="text-lg font-bold text-gray-800 mb-2">{course.title}</h4>
-                    <p className="text-sm text-gray-600 mb-4">{course.description}</p>
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">{course.description}</p>
                     <div className="flex items-center justify-between">
                       <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
                         {course.category}
                       </span>
-                      <button className="text-blue-600 font-semibold text-sm hover:text-blue-700">
-                        View Course →
-                      </button>
+                      <span className="text-xs text-gray-500">
+                        {course.total_lessons || course.totalLessons || 0} lessons
+                      </span>
                     </div>
+                    {course.progress > 0 && (
+                      <div className="mt-3">
+                        <div className="flex justify-between text-xs text-gray-600 mb-1">
+                          <span>Progress</span>
+                          <span>{course.progress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div 
+                            className="h-1.5 rounded-full bg-blue-600"
+                            style={{ width: `${course.progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
