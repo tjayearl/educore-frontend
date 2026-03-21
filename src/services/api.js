@@ -170,6 +170,18 @@ export const progressAPI = {
     }
   },
   
+  getAllProgress: async () => {
+    try {
+      const res = await fetch(`${API_URL}/progress/all`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+      return await handleResponse(res);
+    } catch (err) {
+      console.error('Get all progress error:', err);
+      throw err;
+    }
+  },
+  
   markComplete: async (courseId, lessonId) => {
     try {
       const res = await fetch(`${API_URL}/progress/${courseId}/lessons/${lessonId}/complete`, {

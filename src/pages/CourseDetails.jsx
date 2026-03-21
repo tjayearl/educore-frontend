@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, BookOpen, Video, FileText, CheckCircle, Circle,
-  Play, Download, ExternalLink
+  Play, ExternalLink, Loader
 } from "lucide-react";
 import { coursesAPI, lessonsAPI, progressAPI } from "../services/api";
 
@@ -11,9 +11,10 @@ export default function CourseDetails() {
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
-  const [completedLessons, setCompletedLessons] = useState([]);
+  const [completedLessonIds, setCompletedLessonIds] = useState([]);
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [markingComplete, setMarkingComplete] = useState(false);
 
   useEffect(() => {
     loadCourseData();
@@ -23,40 +24,17 @@ export default function CourseDetails() {
     try {
       setLoading(true);
       
-      // For demo, use mock data
-      setCourse({
-        id: parseInt(id),
-        title: "Introduction to JavaScript",
-        description: "Learn the fundamentals of JavaScript programming",
-        category: "Programming"
-      });
+      // Load course details
+      const courseData = await coursesAPI.getById(id);
+      setCourse(courseData.course);
 
-      setLessons([
-        { 
-          id: 1, 
-          title: "Variables and Data Types", 
-          contentType: "video",
-          contentUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-          order: 1 
-        },
-        { 
-          id: 2, 
-          title: "Functions and Scope", 
-          contentType: "text",
-          contentBody: "Functions are reusable blocks of code...",
-          order: 2 
-        },
-        { 
-          id: 3, 
-          title: "Arrays and Objects", 
-          contentType: "video",
-          contentUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-          order: 3 
-        },
-      ]);
+      // Load lessons
+      const lessonsData = await lessonsAPI.getAll(id);
+      setLessons(lessonsData.lessons || []);
 
-      setCompletedLessons([1]); // Lesson 1 is completed
-      setSelectedLesson(null);
+      // Load progress
+      const progressData = await progressAPI.get(id);
+      setCompletedLessonIds(progressData.progress?.completedLessonIds || []);
     } catch (err) {
       console.error("Error loading course:", err);
     } finally {
@@ -66,27 +44,31 @@ export default function CourseDetails() {
 
   const handleMarkComplete = async (lessonId) => {
     try {
-      if (completedLessons.includes(lessonId)) {
-        // Unmark as complete
-        setCompletedLessons(completedLessons.filter(id => id !== lessonId));
+      setMarkingComplete(true);
+      await progressAPI.markComplete(id, lessonId);
+      
+      // Update local state
+      if (completedLessonIds.includes(lessonId)) {
+        setCompletedLessonIds(completedLessonIds.filter(id => id !== lessonId));
       } else {
-        // Mark as complete
-        await progressAPI.markComplete(course.id, lessonId);
-        setCompletedLessons([...completedLessons, lessonId]);
+        setCompletedLessonIds([...completedLessonIds, lessonId]);
       }
     } catch (err) {
       console.error("Error marking lesson:", err);
+      alert("Failed to update lesson status");
+    } finally {
+      setMarkingComplete(false);
     }
   };
 
   const progress = lessons.length > 0 
-    ? Math.round((completedLessons.length / lessons.length) * 100) 
+    ? Math.round((completedLessonIds.length / lessons.length) * 100) 
     : 0;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <Loader className="w-12 h-12 text-blue-600 animate-spin" />
       </div>
     );
   }
@@ -107,14 +89,21 @@ export default function CourseDetails() {
         <div className="bg-white rounded-xl shadow p-8 mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-4">{course?.title}</h1>
           <p className="text-gray-600 mb-4">{course?.description}</p>
-          <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-            {course?.category}
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+              {course?.category}
+            </span>
+            {course?.instructor_name && (
+              <span className="text-sm text-gray-500">
+                Instructor: {course.instructor_name}
+              </span>
+            )}
+          </div>
 
           {/* Progress Bar */}
           <div className="mt-6">
             <div className="flex justify-between text-sm text-gray-600 mb-2">
-              <span>{completedLessons.length}/{lessons.length} lessons completed</span>
+              <span>{completedLessonIds.length}/{lessons.length} lessons completed</span>
               <span className="font-bold">{progress}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
@@ -133,43 +122,50 @@ export default function CourseDetails() {
           {/* Lesson List */}
           <div className="lg:col-span-1">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Course Lessons</h2>
-            <div className="space-y-3">
-              {lessons.map((lesson) => {
-                const isCompleted = completedLessons.includes(lesson.id);
-                const isSelected = selectedLesson?.id === lesson.id;
-                
-                return (
-                  <div
-                    key={lesson.id}
-                    onClick={() => setSelectedLesson(lesson)}
-                    className={`bg-white rounded-lg shadow p-4 cursor-pointer transition ${
-                      isSelected ? 'ring-2 ring-blue-600' : 'hover:shadow-md'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {isCompleted ? (
-                        <CheckCircle className="text-green-500 flex-shrink-0" size={24} />
-                      ) : (
-                        <Circle className="text-gray-300 flex-shrink-0" size={24} />
-                      )}
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-800">{lesson.title}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {lesson.contentType === "video" ? (
-                            <Video size={14} className="text-gray-400" />
-                          ) : (
-                            <FileText size={14} className="text-gray-400" />
-                          )}
-                          <span className="text-xs text-gray-500">
-                            {lesson.contentType === "video" ? "Video" : "Text"}
-                          </span>
+            {lessons.length === 0 ? (
+              <div className="bg-white rounded-lg shadow p-6 text-center">
+                <BookOpen className="mx-auto text-gray-400 mb-2" size={32} />
+                <p className="text-gray-500 text-sm">No lessons yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {lessons.map((lesson) => {
+                  const isCompleted = completedLessonIds.includes(lesson.id);
+                  const isSelected = selectedLesson?.id === lesson.id;
+                  
+                  return (
+                    <div
+                      key={lesson.id}
+                      onClick={() => setSelectedLesson(lesson)}
+                      className={`bg-white rounded-lg shadow p-4 cursor-pointer transition ${
+                        isSelected ? 'ring-2 ring-blue-600' : 'hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {isCompleted ? (
+                          <CheckCircle className="text-green-500 flex-shrink-0" size={24} />
+                        ) : (
+                          <Circle className="text-gray-300 flex-shrink-0" size={24} />
+                        )}
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-800">{lesson.title}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {lesson.contentType === "video" ? (
+                              <Video size={14} className="text-gray-400" />
+                            ) : (
+                              <FileText size={14} className="text-gray-400" />
+                            )}
+                            <span className="text-xs text-gray-500 capitalize">
+                              {lesson.contentType}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Lesson Content */}
@@ -200,8 +196,10 @@ export default function CourseDetails() {
                 {/* Text Content */}
                 {selectedLesson.contentType === "text" && (
                   <div className="mb-6">
-                    <div className="prose max-w-none">
-                      <p className="text-gray-700 leading-relaxed">{selectedLesson.contentBody}</p>
+                    <div className="prose max-w-none bg-gray-50 p-6 rounded-lg">
+                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {selectedLesson.contentBody}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -209,13 +207,16 @@ export default function CourseDetails() {
                 {/* Mark Complete Button */}
                 <button
                   onClick={() => handleMarkComplete(selectedLesson.id)}
+                  disabled={markingComplete}
                   className={`w-full py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
-                    completedLessons.includes(selectedLesson.id)
+                    completedLessonIds.includes(selectedLesson.id)
                       ? 'bg-green-500 text-white hover:bg-green-600'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
+                  } disabled:opacity-50`}
                 >
-                  {completedLessons.includes(selectedLesson.id) ? (
+                  {markingComplete ? (
+                    <Loader className="animate-spin" size={20} />
+                  ) : completedLessonIds.includes(selectedLesson.id) ? (
                     <>
                       <CheckCircle size={20} />
                       Completed
